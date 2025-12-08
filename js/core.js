@@ -71,7 +71,7 @@ function predict(){
   try{
     const now=ym(new Date().getFullYear()+"-"+String(new Date().getMonth()+1).padStart(2,'0'));
     const fullFrom=ym('1750-01');
-    const fullTo=ym('2035-12');
+    const fullTo=ym('2099-12');
     const checked=[];
     regionCheckboxes.forEach(cb=>{if(cb.checked)checked.push(cb.value)});
     if(checked.length===0){
@@ -176,24 +176,17 @@ function renderView(seriesData,from,ex){
   const iEnd=Math.min(firstArr.length-1,iStart+winLen);
   
   let min=1e9,max=-1e9;
-  const useGlobalScale=keys.includes('global');
-  if(useGlobalScale){
-      const gArr=seriesData['global'];
+  // Calculate min/max based on ALL visible series to prevent overflow
+  for(let k of keys){
+      const arr=seriesData[k];
       for(let i=iStart;i<=iEnd;i++){
-        if(!isNaN(gArr[i])){if(gArr[i]<min)min=gArr[i];if(gArr[i]>max)max=gArr[i]}
-      }
-  }else{
-      for(let k of keys){
-          const arr=seriesData[k];
-          for(let i=iStart;i<=iEnd;i++){
-            if(!isNaN(arr[i])){if(arr[i]<min)min=arr[i];if(arr[i]>max)max=arr[i]}
-          }
+        if(!isNaN(arr[i])){if(arr[i]<min)min=arr[i];if(arr[i]>max)max=arr[i]}
       }
   }
   if(min>max){min=-1;max=1}
   if(max-min<1e-6){max=min+1e-6}
   
-  const axisColor=document.body.classList.contains('light')?'#000000':'#e5e7eb';
+  const axisColor=document.body.classList.contains('light')?'#000000':'#ffffff';
   ctx.lineWidth=1.6;
   const fxm=(m)=>mL+(m-winStart)/winLen*pw;
   const fy=(v)=>mT+ph-(v-min)/(max-min)*ph;
@@ -329,7 +322,7 @@ function renderView(seriesData,from,ex){
   for(let k=0;k<=4;k++){const v=min+(max-min)*k/4;const yy=fy(v);ctx.fillText(v.toFixed(2),mL-10,yy)}
   lastSeriesData=seriesData;lastEx=ex;lastFrom=from;lastMin=min;lastMax=max;lastGeom={mL,mT,pw,ph}
 }
-let dragging=false,lastX=0;function onDown(e){dragging=true;lastX=canvasPos(e).x;hideTooltip()}function onMove(e){const p=canvasPos(e);if(dragging){const dx=p.x-lastX;lastX=p.x;const w=chart.width;const pw=w-68-14;const monthsPerPx=winLen/pw;const dM=Math.round(-dx*monthsPerPx);const fullFrom=ym('1750-01');const fullTo=ym('2035-12');winStart=Math.min(Math.max(fullFrom,winStart+dM),fullTo-winLen);predict()}else{if(!pinned)hoverAt(p.x,p.y)}}function onUp(){dragging=false}
+let dragging=false,lastX=0;function onDown(e){dragging=true;lastX=canvasPos(e).x;hideTooltip()}function onMove(e){const p=canvasPos(e);if(dragging){const dx=p.x-lastX;lastX=p.x;const w=chart.width;const pw=w-68-14;const monthsPerPx=winLen/pw;const dM=Math.round(-dx*monthsPerPx);const fullFrom=ym('1750-01');const fullTo=ym('2099-12');winStart=Math.min(Math.max(fullFrom,winStart+dM),fullTo-winLen);predict()}else{if(!pinned)hoverAt(p.x,p.y)}}function onUp(){dragging=false}
 const tooltipEl=document.getElementById('tooltip');
 tooltipEl.style.pointerEvents='none';
 const chartWrap=document.querySelector('.chartWrap');
@@ -397,7 +390,7 @@ regionCheckboxes.forEach(cb=>{
   cb.addEventListener('change', ()=>{if(!queryMode)predict()});
   cb.addEventListener('click', (e)=>{if(queryMode){e.preventDefault();setQuery('region')}});
 });
-function onWheel(e){e.preventDefault();try{const p=canvasPos(e);const dir=e.deltaY>0?1:-1;const factor=dir>0?1.15:1/1.15;const minLen=5*12,maxLen=80*12;let center=winStart+winLen/2;if(lastGeom){const {mL,pw}=lastGeom;const rel=(p.x-mL)/pw;center=winStart+Math.round(rel*winLen)}winLen=Math.min(Math.max(Math.round(winLen*factor),minLen),maxLen);const fullFrom=ym('1750-01');const fullTo=ym('2035-12');winStart=Math.round(center-winLen/2);winStart=Math.min(Math.max(fullFrom,winStart),fullTo-winLen);hoverEv=null;hideTooltip();predict();hoverAt(p.x,p.y)}catch(e){console.error(e)}}
+function onWheel(e){e.preventDefault();try{const p=canvasPos(e);const dir=e.deltaY>0?1:-1;const factor=dir>0?1.15:1/1.15;const minLen=5*12,maxLen=80*12;let center=winStart+winLen/2;if(lastGeom){const {mL,pw}=lastGeom;const rel=(p.x-mL)/pw;center=winStart+Math.round(rel*winLen)}winLen=Math.min(Math.max(Math.round(winLen*factor),minLen),maxLen);const fullFrom=ym('1750-01');const fullTo=ym('2099-12');winStart=Math.round(center-winLen/2);winStart=Math.min(Math.max(fullFrom,winStart),fullTo-winLen);hoverEv=null;hideTooltip();predict();hoverAt(p.x,p.y)}catch(e){console.error(e)}}
 function advice(tCrash,tBoom){let text='';const now=ym(new Date().getFullYear()+"-"+String(new Date().getMonth()+1).padStart(2,'0'));const L=I18N[langSel.value]||I18N.zh;if(tCrash&&tCrash-now<=12){text+=L.advRisk12}else if(tCrash&&tCrash-now<=24){text+=L.advRisk24}else if(tCrash){text+=L.advRiskLong}if(tBoom&&tBoom-now<=12){text+=(text?' ':'')+L.advStrong12}else if(tBoom){text+=(text?' ':'')+L.advStrongLong}else if(!text){text=L.advNeutral}adviceEl.textContent=text}
 trainBtn.onclick=()=>{
   // Find which region to train. Priority: Single checked region > Global > First checked
@@ -826,7 +819,7 @@ chart.addEventListener('click',onClick);
 chart.addEventListener('mouseleave',()=>{onUp();if(!pinned)hideTooltip()});
 // regionSel listener removed
 chart.addEventListener('wheel',onWheel,{passive:false});
-themeSel.addEventListener('change',()=>{document.body.classList.toggle('light',themeSel.value==='light')});
+themeSel.addEventListener('change',()=>{document.body.classList.toggle('light',themeSel.value==='light');renderView(lastSeriesData,lastFrom,lastEx)});
 gridSel.addEventListener('change',()=>{showGrid=gridSel.checked;predict()});
 queryBtn.addEventListener('click',()=>{queryMode=!queryMode;queryPanel.style.display=queryMode?'block':'none';queryBtn.classList.toggle('query-on',queryMode)});
 function setQuery(key){const lang=langSel.value;const Q=QUERY_TEXTS[lang]||QUERY_TEXTS.zh;queryContentEl.textContent=Q[key]||''}
