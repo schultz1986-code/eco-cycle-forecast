@@ -33,7 +33,6 @@
 <div class="title">下一次经济事件预测</div>
 <div class="row">
 <button id="train">训练模型</button>
-<button id="predict">计算预测</button>
 <label for="grid" style="margin-left:8px" id="lblGrid">网格</label>
 <input type="checkbox" id="grid" checked />
 <button id="queryBtn">?</button>
@@ -69,14 +68,13 @@
 </div>
 <div>
 <div style="margin-bottom:10px">
-<div><span id="lblNextCrash">下一次危机（低点）时间：</span><span class="mono" id="nextCrash">-</span></div>
+<div><span id="lblNextCrash">下一次全球危机：</span><span class="mono" id="nextCrash">-</span></div>
 <div><span id="lblNextBoom">下一次机遇（高点）时间：</span><span class="mono" id="nextBoom">-</span></div>
 <div><span id="lblAdvice">建议：</span><div id="advice" class="muted"></div></div>
 </div>
 <div class="chartWrap" style="position:relative">
 <canvas id="chart" width="900" height="420"></canvas>
 <div id="tooltip" class="tooltip"></div>
-<div id="yaxisLabel" class="yAxisLabel">模型值</div>
 </div>
 </div>
 <div class="card" id="eventInfoPanel" style="display:none">
