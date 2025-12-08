@@ -19,7 +19,6 @@ const helpPanel=document.getElementById('helpPanel');
 const helpTextEl=document.getElementById('helpText');
 const queryPanel=document.getElementById('queryPanel');
 const queryContentEl=document.getElementById('queryContent');
-const predictBtn=document.getElementById('predict');
 const regionCheckboxes=document.querySelectorAll('#regionControls input');
 const COLORS={global:'#60a5fa', us:'#f87171', europe:'#fbbf24', asia:'#34d399', emerging:'#a78bfa', geo:'#fb923c', financial:'#4ade80', tech:'#22d3ee', energy:'#f472b6', policy:'#94a3b8', macro:'#818cf8'};
 const baseY=1750;
@@ -82,32 +81,63 @@ function predict(){
     }
     const seriesData={};
     let primaryEx=null;
+    let primaryArr=null;
     let primaryKey=checked.includes('global')?'global':checked[0];
     
     checked.forEach(region=>{
         let arr=null;
+        let thH=0.6, thL=0.6;
         if(region==='global'){
             arr=seriesGlobal(fullFrom,fullTo);
             if(region===primaryKey){
                  const keys=['us','europe','asia','emerging'];
-                 const thH=keys.map(k=>(MODELS[k]&&MODELS[k].thHigh)||0.6).reduce((a,b)=>a+b,0)/keys.length;
-                 const thL=keys.map(k=>(MODELS[k]&&MODELS[k].thLow)||0.6).reduce((a,b)=>a+b,0)/keys.length;
+                 thH=keys.map(k=>(MODELS[k]&&MODELS[k].thHigh)||0.6).reduce((a,b)=>a+b,0)/keys.length;
+                 thL=keys.map(k=>(MODELS[k]&&MODELS[k].thLow)||0.6).reduce((a,b)=>a+b,0)/keys.length;
+                 primaryArr=arr;
                  primaryEx=extremes(arr,fullFrom,thH,thL);
             }
         }else{
             const m=MODELS[region]||initParams();
             arr=seriesR(region,m,fullFrom,fullTo);
             if(region===primaryKey){
-                 primaryEx=extremes(arr,fullFrom,m.thHigh||0.6,m.thLow||0.6);
+                 thH=m.thHigh||0.6;
+                 thL=m.thLow||0.6;
+                 primaryArr=arr;
+                 primaryEx=extremes(arr,fullFrom,thH,thL);
             }
         }
         seriesData[region]=arr;
     });
 
-    if(primaryEx){
+    if(primaryEx && primaryArr){
         let nextT=null,nextP=null;
         for(let i=0;i<primaryEx.troughs.length;i++){if(primaryEx.troughs[i].t>now){nextT=primaryEx.troughs[i].t;break}}
         for(let i=0;i<primaryEx.peaks.length;i++){if(primaryEx.peaks[i].t>now){nextP=primaryEx.peaks[i].t;break}}
+        
+        // Fallback: force find next local extrema if not found by strict thresholds
+        if(!nextT){
+            for(let i=1; i<primaryArr.length-1; i++){
+                const t = fullFrom + i;
+                if(t > now){
+                    if(primaryArr[i] < primaryArr[i-1] && primaryArr[i] < primaryArr[i+1]){
+                        nextT = t;
+                        break;
+                    }
+                }
+            }
+        }
+        if(!nextP){
+            for(let i=1; i<primaryArr.length-1; i++){
+                const t = fullFrom + i;
+                if(t > now){
+                    if(primaryArr[i] > primaryArr[i-1] && primaryArr[i] > primaryArr[i+1]){
+                        nextP = t;
+                        break;
+                    }
+                }
+            }
+        }
+
         nextCrashEl.textContent=nextT?fromm(nextT):'-';
         nextBoomEl.textContent=nextP?fromm(nextP):'-';
         advice(nextT,nextP);
@@ -163,7 +193,7 @@ function renderView(seriesData,from,ex){
   if(min>max){min=-1;max=1}
   if(max-min<1e-6){max=min+1e-6}
   
-  const axisColor=document.body.classList.contains('light')?'#1f2937':'#e5e7eb';
+  const axisColor=document.body.classList.contains('light')?'#000000':'#e5e7eb';
   ctx.lineWidth=1.6;
   const fxm=(m)=>mL+(m-winStart)/winLen*pw;
   const fy=(v)=>mT+ph-(v-min)/(max-min)*ph;
@@ -310,9 +340,41 @@ function findHit(x,y){let hit=null,hd=1e18;for(let i=0;i<evDraw.length;i++){cons
 function hoverAt(x,y){if(!lastGeom){return}const {mL,mT,pw,ph}=lastGeom;const inside=x>=mL&&x<=mL+pw&&y>=mT&&y<=mT+ph;if(!inside){hideTooltip();if(hoverEv){hoverEv=null;chart.style.cursor='default';renderView(lastSeriesData,lastFrom,lastEx)}return}
   const hit=findHit(x,y);
   if(hit){chart.style.cursor='pointer';const L=I18N[langSel.value]||I18N.zh;const typeMap=L.typeNames||{struct:'结构',geo:'地缘政治',up:'增长',down:'下跌'};const tip=`${evName(hit.e)} | ${typeMap[hit.e.type]||hit.e.type} | ${hit.e.date}`;const cx=x+12,cy=y+12;const tw=(()=>{tooltipEl.style.display='block';tooltipEl.style.left='-9999px';tooltipEl.style.top='-9999px';tooltipEl.textContent=tip;return tooltipEl.offsetWidth})();let nx=cx,ny=cy;const wrapW=chartWrap.clientWidth;if(nx+tw>wrapW-8){nx=cx-tw-16}tooltipEl.style.left=nx+'px';tooltipEl.style.top=ny+'px';tooltipEl.style.display='block';if(hoverEv!==hit){hoverEv=hit;renderView(lastSeriesData,lastFrom,lastEx)}
-  }else{if(hoverEv){hoverEv=null;renderView(lastSeriesData,lastFrom,lastEx)}chart.style.cursor='default';hideTooltip();}
+  }else{
+    if(hoverEv){hoverEv=null;renderView(lastSeriesData,lastFrom,lastEx)}
+    const keys=Object.keys(lastSeriesData);
+    const key=keys.includes('global')?'global':keys[0];
+    const arr=lastSeriesData[key];
+    if(arr){
+      const relX=(x-mL)/pw;
+      const mOffset=Math.round(relX*winLen);
+      const m=winStart+mOffset;
+      const idx=m-lastFrom;
+      if(idx>=0&&idx<arr.length&&!isNaN(arr[idx])){
+        const val=arr[idx];
+        const min=lastMin;
+        const max=lastMax;
+        const wy=mT+ph-(val-min)/(max-min)*ph;
+        if(Math.abs(y-wy)<15){
+          const time=fromm(m);
+          const valStr=val.toFixed(2);
+          const L=I18N[langSel.value]||I18N.zh;
+          const tip=`${L.time||'时间'}: ${time} | ${L.modelValue||'模型值'}: ${valStr}`;
+          const cx=x+12,cy=y+12;
+          const tw=(()=>{tooltipEl.style.display='block';tooltipEl.style.left='-9999px';tooltipEl.style.top='-9999px';tooltipEl.textContent=tip;return tooltipEl.offsetWidth})();
+          let nx=cx,ny=cy;
+          const wrapW=chartWrap.clientWidth;
+          if(nx+tw>wrapW-8){nx=cx-tw-16}
+          tooltipEl.style.left=nx+'px';tooltipEl.style.top=ny+'px';
+          tooltipEl.style.display='block';
+          chart.style.cursor='crosshair';
+        }else{hideTooltip();chart.style.cursor='default'}
+      }else{hideTooltip();chart.style.cursor='default'}
+    }else{hideTooltip();chart.style.cursor='default'}
+  }
 }
-function onClick(e){const p=canvasPos(e);const hit=findHit(p.x,p.y);if(hit){showEventInfo(hit.e)}}
+let lastClickedEv=null;
+function onClick(e){const p=canvasPos(e);const hit=findHit(p.x,p.y);if(hit){lastClickedEv=hit.e;showEventInfo(hit.e)}}
 const eventInfoPanel=document.getElementById('eventInfoPanel');
 const eventInfoEl=document.getElementById('eventInfo');
 function showEventInfo(ev){const lang=langSel.value||'zh';const L=I18N[lang]||I18N.zh;const s=eventSentiment(ev);const sentimentTxt=s==='neg'?(L.neg||'负面'):s==='pos'?(L.pos||'正面'):(L.neutral||'中性');const typeMap=L.typeNames||{struct:'结构',geo:'地缘政治',up:'增长',down:'下跌'};
@@ -336,7 +398,7 @@ regionCheckboxes.forEach(cb=>{
   cb.addEventListener('click', (e)=>{if(queryMode){e.preventDefault();setQuery('region')}});
 });
 function onWheel(e){e.preventDefault();try{const p=canvasPos(e);const dir=e.deltaY>0?1:-1;const factor=dir>0?1.15:1/1.15;const minLen=5*12,maxLen=80*12;let center=winStart+winLen/2;if(lastGeom){const {mL,pw}=lastGeom;const rel=(p.x-mL)/pw;center=winStart+Math.round(rel*winLen)}winLen=Math.min(Math.max(Math.round(winLen*factor),minLen),maxLen);const fullFrom=ym('1750-01');const fullTo=ym('2035-12');winStart=Math.round(center-winLen/2);winStart=Math.min(Math.max(fullFrom,winStart),fullTo-winLen);hoverEv=null;hideTooltip();predict();hoverAt(p.x,p.y)}catch(e){console.error(e)}}
-function advice(tCrash,tBoom){let text='';const now=ym(new Date().getFullYear()+"-"+String(new Date().getMonth()+1).padStart(2,'0'));const L=I18N[langSel.value]||I18N.zh;if(tCrash&&tCrash-now<=12){text+=L.advRisk12}else if(tCrash&&tCrash-now<=24){text+=L.advRisk24}if(tBoom&&tBoom-now<=12){text+=(text?' ':'')+L.advStrong12}else if(!text){text=L.advNeutral}adviceEl.textContent=text}
+function advice(tCrash,tBoom){let text='';const now=ym(new Date().getFullYear()+"-"+String(new Date().getMonth()+1).padStart(2,'0'));const L=I18N[langSel.value]||I18N.zh;if(tCrash&&tCrash-now<=12){text+=L.advRisk12}else if(tCrash&&tCrash-now<=24){text+=L.advRisk24}else if(tCrash){text+=L.advRiskLong}if(tBoom&&tBoom-now<=12){text+=(text?' ':'')+L.advStrong12}else if(tBoom){text+=(text?' ':'')+L.advStrongLong}else if(!text){text=L.advNeutral}adviceEl.textContent=text}
 trainBtn.onclick=()=>{
   // Find which region to train. Priority: Single checked region > Global > First checked
   let target='global';
@@ -656,8 +718,8 @@ evalBtn.onclick=()=>evaluate();
 const themeSel=document.getElementById('theme');
 const langSel=document.getElementById('lang');
 const I18N={
-zh:{predict:'预测',events:'事件评估',train:'训练模型',calc:'计算预测',view:'视图',theme:'主题',lang:'语言',save:'保存模型',load:'导入模型',export:'导出模型',nextCrash:'下一次危机（低点）时间：',nextBoom:'下一次机遇（高点）时间：',advice:'建议：',statusGen:'第 ',statusDone:'训练完成 ',error:'误差 ',cv:' | CV ',eventsTitle:'历史事件评估',eval:'生成评估',avgDelta:'平均时间差 ',avgImpact:' 月 | 平均影响差 ',regionNames:{global:'全球',us:'美国',europe:'欧洲',asia:'亚洲',emerging:'新兴市场',energy:'能源',tech:'科技',geo:'地缘',financial:'金融',policy:'政策',macro:'宏观'},themeNames:{dark:'深色',light:'浅色'},th:{name:'名称',type:'类别',date:'时间',impact:'真实影响',modelTime:'模型极值时间',delta:'时间差(月)',modelImpact:'模型影响',impactDiff:'影响差'},advRisk12:'未来12个月内可能出现系统性风险。提高现金比重、分散资产、关注优质债券与防御板块。',advRisk24:'未来1-2年风险窗口可能打开。逐步降低杠杆，保留流动性，设置止损。',advStrong12:'可能出现阶段性强势。考虑分批建仓优质资产，控制仓位。',advNeutral:'未检测到近端显著信号。保持均衡配置与动态再平衡。',typeNames:{struct:'结构',geo:'地缘政治',up:'上涨',down:'下跌'},tpDate:'时间',tpImpact:'影响'},
-en:{predict:'Forecast',events:'Event Evaluation',train:'Train Model',calc:'Compute Forecast',view:'View',theme:'Theme',lang:'Language',save:'Save Model',load:'Import Model',export:'Export Model',nextCrash:'Next crisis (low) time: ',nextBoom:'Next boom (high) time: ',advice:'Advice: ',statusGen:'Gen ',statusDone:'Training done ',error:'Error ',cv:' | CV ',eventsTitle:'Historical Events Evaluation',eval:'Generate Evaluation',avgDelta:'Avg time delta ',avgImpact:' mo | Avg impact delta ',regionNames:{global:'Global',us:'US',europe:'Europe',asia:'Asia',emerging:'Emerging',energy:'Energy',tech:'Tech',geo:'Geo',financial:'Financial',policy:'Policy',macro:'Macro'},themeNames:{dark:'Dark',light:'Light'},th:{name:'Name',type:'Type',date:'Date',impact:'True Impact',modelTime:'Model Extremum',delta:'Delta (mo)',modelImpact:'Model Impact',impactDiff:'Impact Delta'},advRisk12:'Potential systemic risk within 12 months. Raise cash, diversify, consider bonds/defensive.',advRisk24:'Risk window may open in 1–2 years. Reduce leverage, keep liquidity, set stops.',advStrong12:'Potential strength within 12 months. Consider staged accumulation, control exposure.',advNeutral:'No near-term strong signal detected. Keep balanced allocation and rebalance.',typeNames:{struct:'Structural',geo:'Geopolitical',up:'Up',down:'Down'},tpDate:'Date',tpImpact:'Impact',tpHigh:'High',tpLow:'Low'},
+zh:{predict:'预测',events:'事件评估',train:'训练模型',calc:'计算预测',view:'视图',theme:'主题',lang:'语言',save:'保存模型',load:'导入模型',export:'导出模型',nextCrash:'下一次全球危机：',nextBoom:'下一次机遇（高点）时间：',advice:'建议：',statusGen:'第 ',statusDone:'训练完成 ',error:'误差 ',cv:' | CV ',eventsTitle:'历史事件评估',eval:'生成评估',avgDelta:'平均时间差 ',avgImpact:' 月 | 平均影响差 ',regionNames:{global:'全球',us:'美国',europe:'欧洲',asia:'亚洲',emerging:'新兴市场',energy:'能源',tech:'科技',geo:'地缘',financial:'金融',policy:'政策',macro:'宏观'},themeNames:{dark:'深色',light:'浅色'},th:{name:'名称',type:'类别',date:'时间',impact:'真实影响',modelTime:'模型极值时间',delta:'时间差(月)',modelImpact:'模型影响',impactDiff:'影响差'},advRisk12:'未来12个月内可能出现系统性风险。提高现金比重、分散资产、关注优质债券与防御板块。',advRisk24:'未来1-2年风险窗口可能打开。逐步降低杠杆，保留流动性，设置止损。',advRiskLong:'长期周期显示下行压力。建议保持长期稳健配置，关注避险资产。',advStrong12:'可能出现阶段性强势。考虑分批建仓优质资产，控制仓位。',advStrongLong:'长期趋势向上，但短期需等待回调机会。',advNeutral:'未检测到近端显著信号。保持均衡配置与动态再平衡。',typeNames:{struct:'结构',geo:'地缘政治',up:'上涨',down:'下跌'},tpDate:'时间',tpImpact:'影响'},
+en:{predict:'Forecast',events:'Event Evaluation',train:'Train Model',calc:'Compute Forecast',view:'View',theme:'Theme',lang:'Language',save:'Save Model',load:'Import Model',export:'Export Model',nextCrash:'Next Global Crisis: ',nextBoom:'Next boom (high) time: ',advice:'Advice: ',statusGen:'Gen ',statusDone:'Training done ',error:'Error ',cv:' | CV ',eventsTitle:'Historical Events Evaluation',eval:'Generate Evaluation',avgDelta:'Avg time delta ',avgImpact:' mo | Avg impact delta ',regionNames:{global:'Global',us:'US',europe:'Europe',asia:'Asia',emerging:'Emerging',energy:'Energy',tech:'Tech',geo:'Geo',financial:'Financial',policy:'Policy',macro:'Macro'},themeNames:{dark:'Dark',light:'Light'},th:{name:'Name',type:'Type',date:'Date',impact:'True Impact',modelTime:'Model Extremum',delta:'Delta (mo)',modelImpact:'Model Impact',impactDiff:'Impact Delta'},advRisk12:'Potential systemic risk within 12 months. Raise cash, diversify, consider bonds/defensive.',advRisk24:'Risk window may open in 1–2 years. Reduce leverage, keep liquidity, set stops.',advRiskLong:'Long-term cycle suggests downward pressure. Maintain prudent allocation.',advStrong12:'Potential strength within 12 months. Consider staged accumulation, control exposure.',advStrongLong:'Long-term trend is up, wait for pullbacks.',advNeutral:'No near-term strong signal detected. Keep balanced allocation and rebalance.',typeNames:{struct:'Structural',geo:'Geopolitical',up:'Up',down:'Down'},tpDate:'Date',tpImpact:'Impact',tpHigh:'High',tpLow:'Low'},
 fr:{predict:'Prévision',events:'Évaluation des événements',train:'Entraîner le modèle',calc:'Calculer la prévision',view:'Vue',theme:'Thème',lang:'Langue',save:'Enregistrer le modèle',load:'Importer le modèle',export:'Exporter le modèle',nextCrash:'Prochaine crise (bas) : ',nextBoom:'Prochain boom (haut) : ',advice:'Conseil : ',statusGen:'Génération ',statusDone:'Entraînement terminé ',error:'Erreur ',cv:' | CV ',eventsTitle:'Évaluation des événements historiques',eval:`Générer l'évaluation`,avgDelta:'Δ temps moyen ',avgImpact:' mois | Δ impact moyen ',regionNames:{global:'Global',us:'États-Unis',europe:'Europe',asia:'Asie',emerging:'Marchés émergents',energy:'Énergie',tech:'Tech',geo:'Géo',financial:'Financier',policy:'Politique',macro:'Macro'},themeNames:{dark:'Sombre',light:'Clair'},th:{name:'Nom',type:'Type',date:'Date',impact:'Impact réel',modelTime:'Extrémum du modèle',delta:'Δ (mois)',modelImpact:'Impact du modèle',impactDiff:`Δ d'impact`},advRisk12:'Risque systémique possible sous 12 mois. Augmenter la trésorerie, diversifier, obligations/défensif.',advRisk24:`Fenêtre de risque possible dans 1–2 ans. Réduire l'effet de levier, garder la liquidité.`,advStrong12:'Force possible sous 12 mois. Entrées progressives sur actifs de qualité, contrôle de l’exposition.',advNeutral:'Aucun signal fort à court terme. Allocation équilibrée et rééquilibrage.',typeNames:{struct:'Structurel',geo:'Géopolitique',up:'Hausse',down:'Baisse'},tpDate:'Date',tpImpact:'Impact',tpHigh:'Haut',tpLow:'Bas'},
 de:{predict:'Prognose',events:'Ereignisbewertung',train:'Modell trainieren',calc:'Prognose berechnen',view:'Ansicht',theme:'Thema',lang:'Sprache',save:'Modell speichern',load:'Modell importieren',export:'Modell exportieren',nextCrash:'Nächste Krise (Tief): ',nextBoom:'Nächster Aufschwung (Hoch): ',advice:'Empfehlung: ',statusGen:'Generation ',statusDone:'Training abgeschlossen ',error:'Fehler ',cv:' | CV ',eventsTitle:'Bewertung historischer Ereignisse',eval:'Bewertung erstellen',avgDelta:'Durchschnittliche Zeitabweichung ',avgImpact:' Mon. | Durchschnittliche Impact‑Abweichung ',regionNames:{global:'Global',us:'USA',europe:'Europa',asia:'Asien',emerging:'Emerging Markets',energy:'Energie',tech:'Tech',geo:'Geopolitik',financial:'Finanzen',policy:'Politik',macro:'Makro'},themeNames:{dark:'Dunkel',light:'Hell'},th:{name:'Name',type:'Typ',date:'Datum',impact:'Reale Wirkung',modelTime:'Modell‑Extremum',delta:'Abw. (Mon.)',modelImpact:'Modellwirkung',impactDiff:'Wirkungs‑Abw.'},advRisk12:'Systemisches Risiko innerhalb von 12 Monaten möglich. Liquidität erhöhen, diversifizieren, Anleihen/Defensive.',advRisk24:'Risikofenster in 1–2 Jahren möglich. Hebel reduzieren, Liquidität halten, Stopps setzen.',advStrong12:'Mögliche Stärke innerhalb von 12 Monaten. Staffelkäufe in Qualitätswerte, Positionskontrolle.',advNeutral:'Kein starker Kurzfristsignal. Ausgewogene Allokation und Rebalancing.',typeNames:{struct:'Strukturell',geo:'Geopolitisch',up:'Anstieg',down:'Rückgang'},tpDate:'Datum',tpImpact:'Wirkung',tpHigh:'Hoch',tpLow:'Tief'}}
 // fill missing i18n keys for grid/help/query labels
@@ -715,7 +777,6 @@ function applyLangFinal(){
   document.getElementById('thModelImpact').textContent=L.th.modelImpact;
   document.getElementById('thImpactDiff').textContent=L.th.impactDiff;
   document.getElementById('train').textContent=L.train;
-  document.getElementById('predict').textContent=L.calc;
   document.getElementById('lblRegion').textContent=L.regionLabel||'Region';
   document.getElementById('lblDomain').textContent=L.domainLabel||'Domain';
   document.getElementById('lblTheme').textContent=L.theme;
@@ -723,8 +784,6 @@ function applyLangFinal(){
   document.getElementById('helpTitle').textContent=(L.helpTitle||'帮助');
   document.getElementById('queryTitle').textContent=(L.queryTitle||'查询说明');
   document.getElementById('lblGrid').textContent=(L.grid||'网格');
-  const yl=document.getElementById('yaxisLabel');
-  if(yl)yl.textContent=(L.yAxis||'模型值');
   const ei=document.getElementById('eventInfoTitle');
   if(ei){const lang=langSel.value||'zh';ei.textContent=(L.eventInfo)||((lang==='zh')?'事件详情':'Event Details')}
   document.getElementById('saveModel').textContent=L.save;
@@ -751,6 +810,12 @@ function applyLangFinal(){
   if(typeof lastErr==='number'&&typeof lastCv==='number'){
     fitnessEl.textContent=L.error+lastErr.toFixed(1)+L.cv+lastCv.toFixed(1)
   }
+  if(viewEvents.style.display!=='none'){
+    tabInfo.textContent=(L.tabInfoEvents||'训练后点击生成评估');
+  }
+  if(eventInfoPanel.style.display!=='none' && lastClickedEv){
+    showEventInfo(lastClickedEv);
+  }
 }
 document.body.classList.toggle('light',themeSel.value==='light');
 applyLangFinal();
@@ -759,7 +824,6 @@ chart.addEventListener('mousemove',onMove);
 chart.addEventListener('mouseup',onUp);
 chart.addEventListener('click',onClick);
 chart.addEventListener('mouseleave',()=>{onUp();if(!pinned)hideTooltip()});
-predictBtn.addEventListener('click',()=>{if(queryMode)setQuery('predict'); else predict()});
 // regionSel listener removed
 chart.addEventListener('wheel',onWheel,{passive:false});
 themeSel.addEventListener('change',()=>{document.body.classList.toggle('light',themeSel.value==='light')});
@@ -829,16 +893,7 @@ async function boot(){
     }catch(e){}
   }
 
-  // FORCE RESET if anything failed or data is partial
-  if(!loaded){
-      console.warn("Data load failed or invalid. Resetting to defaults.");
-      localStorage.removeItem('forecast_models_v2');
-      localStorage.removeItem('forecast_model');
-      for(let k in MODELS) MODELS[k]=initParams();
-      loaded=true;
-  }
-
-  // Skip fetch if we already reset to defaults or loaded successfully
+  // Try fetch from model.json if still not loaded
   if(!loaded){
     try{
       const r=await fetch('model.json',{cache:'no-cache'});
@@ -856,6 +911,16 @@ async function boot(){
       }
     }catch(e){}
   }
+
+  // FORCE RESET if anything failed or data is partial
+  if(!loaded){
+      console.warn("Data load failed or invalid. Resetting to defaults.");
+      localStorage.removeItem('forecast_models_v2');
+      localStorage.removeItem('forecast_model');
+      for(let k in MODELS) MODELS[k]=initParams();
+      loaded=true;
+  }
+  
   predict();
 }
 boot();
