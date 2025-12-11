@@ -32,7 +32,17 @@
 <div class="card" id="viewPredict">
 <div class="title">下一次经济事件预测</div>
 <div class="row">
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;padding:8px;background:#f8fafc;border-radius:6px;width:100%">
+  <span style="font-weight:bold;font-size:13px;color:#475569">数据源：</span>
+  <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px"><input type="checkbox" id="checkCycle" checked> <span>周期模型</span></label>
+  <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px"><input type="checkbox" id="checkStock" checked> <span>股市大盘</span></label>
+  <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px"><input type="checkbox" id="checkGold" checked> <span>黄金</span></label>
+  <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px"><input type="checkbox" id="checkOil" checked> <span>原油</span></label>
+</div>
+</div>
+<div class="row">
 <button id="train">训练模型</button>
+<label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;margin-left:8px"><input type="checkbox" id="fitMarket"> <span id="lblFitMarket">拟合市场趋势</span></label>
 <label for="grid" style="margin-left:8px" id="lblGrid">网格</label>
 <input type="checkbox" id="grid" checked />
 <button id="queryBtn">?</button>
@@ -76,6 +86,29 @@
 <canvas id="chart" width="900" height="420"></canvas>
 <div id="tooltip" class="tooltip"></div>
 </div>
+<div id="marketChartsArea" style="display:flex;flex-direction:column;gap:10px;margin-top:20px;">
+  <!-- Stock Market Chart -->
+  <div class="market-chart-container" style="position:relative;">
+    <div style="font-size:12px;font-weight:bold;margin-bottom:4px;color:#475569;display:flex;align-items:center;gap:8px">
+      <span>股市大盘 (Stock Market)</span>
+      <select id="stockIndexSel" style="font-size:11px;padding:2px">
+        <option value="sp500">S&P 500 (US)</option>
+        <option value="shanghai">上证指数 (CN)</option>
+      </select>
+    </div>
+    <canvas id="chartStock" width="900" height="150" style="border:1px solid #e2e8f0;border-radius:4px;background:rgba(255,255,255,0.5)"></canvas>
+  </div>
+  <!-- Gold Chart -->
+  <div class="market-chart-container" style="position:relative;">
+    <div style="font-size:12px;font-weight:bold;margin-bottom:4px;color:#475569">黄金 (Gold)</div>
+    <canvas id="chartGold" width="900" height="150" style="border:1px solid #e2e8f0;border-radius:4px;background:rgba(255,255,255,0.5)"></canvas>
+  </div>
+  <!-- Oil Chart -->
+  <div class="market-chart-container" style="position:relative;">
+    <div style="font-size:12px;font-weight:bold;margin-bottom:4px;color:#475569">原油 (Crude Oil)</div>
+    <canvas id="chartOil" width="900" height="150" style="border:1px solid #e2e8f0;border-radius:4px;background:rgba(255,255,255,0.5)"></canvas>
+  </div>
+</div>
 </div>
 <div class="card" id="eventInfoPanel" style="display:none">
 <div class="title" id="eventInfoTitle">事件详情</div>
@@ -110,6 +143,7 @@
 <th id="thDelta" style="padding:6px;border-bottom:1px solid #374151">时间差(月)</th>
 <th id="thModelImpact" style="padding:6px;border-bottom:1px solid #374151">模型影响</th>
 <th id="thImpactDiff" style="padding:6px;border-bottom:1px solid #374151">影响差</th>
+<th id="thMarket" style="padding:6px;border-bottom:1px solid #374151">市场数据摘要</th>
 </tr>
 </thead>
 <tbody id="eventsTable"></tbody>
@@ -117,6 +151,7 @@
 </div>
 </div>
 </div>
-<script src="js/core.js"></script>
+<script src="js/market_data.js"></script>
+  <script src="js/core.js"></script>
 </body>
 </html>

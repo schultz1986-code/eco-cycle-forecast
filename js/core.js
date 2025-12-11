@@ -1,6 +1,6 @@
 const chart=document.getElementById('chart');
 const ctx=chart.getContext('2d');
-function canvasPos(e){const rect=chart.getBoundingClientRect();const sx=chart.width/rect.width;const sy=chart.height/rect.height;return {x:(e.clientX-rect.left)*sx,y:(e.clientY-rect.top)*sy}}
+function canvasPos(e){const c=(e.target&&e.target.getBoundingClientRect)?e.target:chart;const rect=c.getBoundingClientRect();const w=c.width||900;const h=c.height||(c===chart?420:150);const sx=w/rect.width;const sy=h/rect.height;return {x:(e.clientX-rect.left)*sx,y:(e.clientY-rect.top)*sy}}
 function yearStep(pw,winLen){const years=winLen/12;const pxPerYear=pw/years;const target=80;const raw=target/pxPerYear;const choices=[1,2,5,10,20,50];for(let i=0;i<choices.length;i++){if(choices[i]>=raw)return choices[i]}return choices[choices.length-1]}
 const statusEl=document.getElementById('status');
 const fitnessEl=document.getElementById('fitness');
@@ -56,12 +56,12 @@ function seriesGlobal(from,to){const arr=new Array(to-from+1);for(let i=from;i<=
 function extremes(arr,from,thHigh=0.6,thLow=0.6){const peaks=[];const troughs=[];for(let i=1;i<arr.length-1;i++){const v=arr[i];if(v>arr[i-1]&&v>arr[i+1]&&v>thHigh)peaks.push({t:from+i,v});if(v<arr[i-1]&&v<arr[i+1]&&-v>thLow)troughs.push({t:from+i,v})}return {peaks,troughs}}
 function nearest(list,t){let best=1e9;for(let i=0;i<list.length;i++){const d=Math.abs(list[i].t-t);if(d<best)best=d}return Math.min(best,120)}
 function filterRange(list,start,end){const out=[];for(let i=0;i<list.length;i++){if(list[i]>=start&&list[i]<=end)out.push(list[i])}return out}
-function scoreFull(params){const from=ym('1750-01');const to=ym('2024-12');const arr=series(params,from,to);const ex=extremes(arr,from);const cut=ym('1900-01');let e1=0;for(let i=0;i<crises.length;i++){const w=crises[i]<cut?0.5:1;e1+=nearest(ex.troughs,crises[i])*w}let e2=0;for(let i=0;i<booms.length;i++){const w=booms[i]<cut?0.5:1;e2+=nearest(ex.peaks,booms[i])*w}let e3=0;for(let i=0;i<geo.length;i++){const w=geo[i]<cut?0.5:1;e3+=(nearest(ex.peaks,geo[i])*.5+nearest(ex.troughs,geo[i])*.5)*w}const total=e1*0.5+e2*0.3+e3*0.2;const r1s=ym('1900-01'),r1e=ym('1959-12'),r2s=ym('1960-01'),r2e=ym('1999-12'),r3s=ym('2000-01'),r3e=ym('2024-12');function seg(sc,sp,sGeo){return sc*0.5+sp*0.3+sGeo*0.2}function sumNearest(events,list,start,end){const ev=filterRange(events,start,end);let s=0;for(let i=0;i<ev.length;i++)s+=nearest(list,ev[i]);return s}const s1=seg(sumNearest(crises,ex.troughs,r1s,r1e),sumNearest(booms,ex.peaks,r1s,r1e),0.5*sumNearest(geo,ex.peaks,r1s,r1e)+0.5*sumNearest(geo,ex.troughs,r1s,r1e));const s2=seg(sumNearest(crises,ex.troughs,r2s,r2e),sumNearest(booms,ex.peaks,r2s,r2e),0.5*sumNearest(geo,ex.peaks,r2s,r2e)+0.5*sumNearest(geo,ex.troughs,r2s,r2e));const s3=seg(sumNearest(crises,ex.troughs,r3s,r3e),sumNearest(booms,ex.peaks,r3s,r3e),0.5*sumNearest(geo,ex.peaks,r3s,r3e)+0.5*sumNearest(geo,ex.troughs,r3s,r3e));function std(a){const m=a.reduce((x,y)=>x+y,0)/a.length;let v=0;for(let i=0;i<a.length;i++)v+=(a[i]-m)*(a[i]-m);return Math.sqrt(v/a.length)}const cv=std([s1,s2,s3]);return {total,cv}}
+function scoreFull(params){const from=ym('1750-01');const to=ym('2024-12');const arr=series(params,from,to);const ex=extremes(arr,from);const cut=ym('1900-01');let e1=0;for(let i=0;i<crises.length;i++){const w=crises[i]<cut?0.5:1;e1+=nearest(ex.troughs,crises[i])*w}let e2=0;for(let i=0;i<booms.length;i++){const w=booms[i]<cut?0.5:1;e2+=nearest(ex.peaks,booms[i])*w}let e3=0;for(let i=0;i<geo.length;i++){const w=geo[i]<cut?0.5:1;e3+=(nearest(ex.peaks,geo[i])*.5+nearest(ex.troughs,geo[i])*.5)*w}let total=e1*0.5+e2*0.3+e3*0.2;const r1s=ym('1900-01'),r1e=ym('1959-12'),r2s=ym('1960-01'),r2e=ym('1999-12'),r3s=ym('2000-01'),r3e=ym('2024-12');function seg(sc,sp,sGeo){return sc*0.5+sp*0.3+sGeo*0.2}function sumNearest(events,list,start,end){const ev=filterRange(events,start,end);let s=0;for(let i=0;i<ev.length;i++)s+=nearest(list,ev[i]);return s}const s1=seg(sumNearest(crises,ex.troughs,r1s,r1e),sumNearest(booms,ex.peaks,r1s,r1e),0.5*sumNearest(geo,ex.peaks,r1s,r1e)+0.5*sumNearest(geo,ex.troughs,r1s,r1e));const s2=seg(sumNearest(crises,ex.troughs,r2s,r2e),sumNearest(booms,ex.peaks,r2s,r2e),0.5*sumNearest(geo,ex.peaks,r2s,r2e)+0.5*sumNearest(geo,ex.troughs,r2s,r2e));const s3=seg(sumNearest(crises,ex.troughs,r3s,r3e),sumNearest(booms,ex.peaks,r3s,r3e),0.5*sumNearest(geo,ex.peaks,r3s,r3e)+0.5*sumNearest(geo,ex.troughs,r3s,r3e));function std(a){const m=a.reduce((x,y)=>x+y,0)/a.length;let v=0;for(let i=0;i<a.length;i++)v+=(a[i]-m)*(a[i]-m);return Math.sqrt(v/a.length)}const cv=std([s1,s2,s3]);const fitM=document.getElementById('fitMarket')&&document.getElementById('fitMarket').checked;if(fitM&&MARKET_DATA&&MARKET_DATA.stock){let mErr=0;const step=6;for(let i=step;i<arr.length;i+=step){if(i>=MARKET_DATA.stock.length)break;const dModel=arr[i]-arr[i-step];const dMarket=MARKET_DATA.stock[i]-MARKET_DATA.stock[i-step];if(dModel*dMarket<0)mErr++}total+=mErr*0.5}return {total,cv}}
 function initParams(){return {a:new Array(P.length).fill(0).map(()=>rand()),ph:P.map(p=>rand()*p),k:rand(),sigma:6+rand()*18,thHigh:0.6+rand()*1.4,thLow:0.6+rand()*1.4}}
 function mutate(p){const q=JSON.parse(JSON.stringify(p));for(let i=0;i<P.length;i++){q.a[i]=clamp(q.a[i]+(rand()-.5)*0.2,0,1);q.ph[i]=clamp(q.ph[i]+(rand()-.5)*0.1*P[i],0,P[i])}q.k=clamp(q.k+(rand()-.5)*0.2,0,1);q.sigma=clamp(q.sigma+(rand()-.5)*6,4,30);q.thHigh=clamp(q.thHigh+(rand()-.5)*0.3,0.3,2.5);q.thLow=clamp(q.thLow+(rand()-.5)*0.3,0.3,2.5);return q}
 let paramsG=initParams();
 const MODELS={us:initParams(),europe:initParams(),asia:initParams(),emerging:initParams(),geo:initParams(),financial:initParams(),tech:initParams(),energy:initParams(),policy:initParams(),macro:initParams()};
-function scoreFullR(region,params){const from=ym('1750-01');const to=ym('2024-12');const arr=seriesR(region,params,from,to);const ex=extremes(arr,from,params.thHigh,params.thLow);const cut=ym('1900-01');let e1=0;for(let i=0;i<crises.length;i++){const w=crises[i]<cut?0.5:1;e1+=nearest(ex.troughs,crises[i])*w}let e2=0;for(let i=0;i<booms.length;i++){const w=booms[i]<cut?0.5:1;e2+=nearest(ex.peaks,booms[i])*w}let e3=0;for(let i=0;i<geo.length;i++){const w=geo[i]<cut?0.5:1;e3+=(nearest(ex.peaks,geo[i])*.5+nearest(ex.troughs,geo[i])*.5)*w}const total=e1*0.5+e2*0.3+e3*0.2;const r1s=ym('1900-01'),r1e=ym('1959-12'),r2s=ym('1960-01'),r2e=ym('1999-12'),r3s=ym('2000-01'),r3e=ym('2024-12');function seg(sc,sp,sGeo){return sc*0.5+sp*0.3+sGeo*0.2}function sumNearest(events,list,start,end){const ev=filterRange(events,start,end);let s=0;for(let i=0;i<ev.length;i++)s+=nearest(list,ev[i]);return s}const s1=seg(sumNearest(crises,ex.troughs,r1s,r1e),sumNearest(booms,ex.peaks,r1s,r1e),0.5*sumNearest(geo,ex.peaks,r1s,r1e)+0.5*sumNearest(geo,ex.troughs,r1s,r1e));const s2=seg(sumNearest(crises,ex.troughs,r2s,r2e),sumNearest(booms,ex.peaks,r2s,r2e),0.5*sumNearest(geo,ex.peaks,r2s,r2e)+0.5*sumNearest(geo,ex.troughs,r2s,r2e));const s3=seg(sumNearest(crises,ex.troughs,r3s,r3e),sumNearest(booms,ex.peaks,r3s,r3e),0.5*sumNearest(geo,ex.peaks,r3s,r3e)+0.5*sumNearest(geo,ex.troughs,r3s,r3e));function std(a){const m=a.reduce((x,y)=>x+y,0)/a.length;let v=0;for(let i=0;i<a.length;i++)v+=(a[i]-m)*(a[i]-m);return Math.sqrt(v/a.length)}const cv=std([s1,s2,s3]);return {total,cv}}
+function scoreFullR(region,params){const from=ym('1750-01');const to=ym('2024-12');const arr=seriesR(region,params,from,to);const ex=extremes(arr,from,params.thHigh,params.thLow);const cut=ym('1900-01');let e1=0;for(let i=0;i<crises.length;i++){const w=crises[i]<cut?0.5:1;e1+=nearest(ex.troughs,crises[i])*w}let e2=0;for(let i=0;i<booms.length;i++){const w=booms[i]<cut?0.5:1;e2+=nearest(ex.peaks,booms[i])*w}let e3=0;for(let i=0;i<geo.length;i++){const w=geo[i]<cut?0.5:1;e3+=(nearest(ex.peaks,geo[i])*.5+nearest(ex.troughs,geo[i])*.5)*w}let total=e1*0.5+e2*0.3+e3*0.2;const r1s=ym('1900-01'),r1e=ym('1959-12'),r2s=ym('1960-01'),r2e=ym('1999-12'),r3s=ym('2000-01'),r3e=ym('2024-12');function seg(sc,sp,sGeo){return sc*0.5+sp*0.3+sGeo*0.2}function sumNearest(events,list,start,end){const ev=filterRange(events,start,end);let s=0;for(let i=0;i<ev.length;i++)s+=nearest(list,ev[i]);return s}const s1=seg(sumNearest(crises,ex.troughs,r1s,r1e),sumNearest(booms,ex.peaks,r1s,r1e),0.5*sumNearest(geo,ex.peaks,r1s,r1e)+0.5*sumNearest(geo,ex.troughs,r1s,r1e));const s2=seg(sumNearest(crises,ex.troughs,r2s,r2e),sumNearest(booms,ex.peaks,r2s,r2e),0.5*sumNearest(geo,ex.peaks,r2s,r2e)+0.5*sumNearest(geo,ex.troughs,r2s,r2e));const s3=seg(sumNearest(crises,ex.troughs,r3s,r3e),sumNearest(booms,ex.peaks,r3s,r3e),0.5*sumNearest(geo,ex.peaks,r3s,r3e)+0.5*sumNearest(geo,ex.troughs,r3s,r3e));function std(a){const m=a.reduce((x,y)=>x+y,0)/a.length;let v=0;for(let i=0;i<a.length;i++)v+=(a[i]-m)*(a[i]-m);return Math.sqrt(v/a.length)}const cv=std([s1,s2,s3]);const fitM=document.getElementById('fitMarket')&&document.getElementById('fitMarket').checked;if(fitM&&MARKET_DATA&&MARKET_DATA.stock){let mErr=0;const step=6;for(let i=step;i<arr.length;i+=step){if(i>=MARKET_DATA.stock.length)break;const dModel=arr[i]-arr[i-step];const dMarket=MARKET_DATA.stock[i]-MARKET_DATA.stock[i-step];if(dModel*dMarket<0)mErr++}total+=mErr*0.5}return {total,cv}}
 function trainRegion(region,gen=40,pop=36,keep=8){const popu=new Array(pop).fill(0).map(()=>initParams());const t0=performance.now();for(let g=0;g<gen;g++){const scored=popu.map(p=>{const f=scoreFullR(region,p);return {p,s:f.total+0.5*f.cv,t:f.total,c:f.cv}}).sort((a,b)=>a.s-b.s);for(let i=0;i<keep;i++)popu[i]=scored[i].p;for(let i=keep;i<pop;i++)popu[i]=mutate(popu[Math.floor(rand()*keep)]);MODELS[region]=scored[0].p;setStatusGen(g+1);setFitness(scored[0].t,scored[0].c);setProgress(((g+1)/gen)*100)}const t1=performance.now();setDone(Math.round(t1-t0));setProgress(100)}
 const appStateEl=document.getElementById('appState');
 function setAppState(txt){if(appStateEl)appStateEl.textContent=txt;console.log("[App State]", txt)}
@@ -75,9 +75,9 @@ function predict(){
     const checked=[];
     regionCheckboxes.forEach(cb=>{if(cb.checked)checked.push(cb.value)});
     if(checked.length===0){
-        renderView({},fullFrom,null);
-        setAppState('请选择至少一个区域');
-        return;
+        checked.push('global');
+        const gb = document.querySelector('input[value="global"]');
+        if(gb) gb.checked = true;
     }
     const seriesData={};
     let primaryEx=null;
@@ -320,9 +320,10 @@ function renderView(seriesData,from,ex){
   for(let y=yrStart-(yrStart%step);y<=yrEnd;y+=step){const m=(y-baseY)*12;const xx=fxm(m);ctx.fillText(String(y),xx,mT+ph+10)}
   ctx.textAlign='right';ctx.textBaseline='middle';
   for(let k=0;k<=4;k++){const v=min+(max-min)*k/4;const yy=fy(v);ctx.fillText(v.toFixed(2),mL-10,yy)}
-  lastSeriesData=seriesData;lastEx=ex;lastFrom=from;lastMin=min;lastMax=max;lastGeom={mL,mT,pw,ph}
+  lastSeriesData=seriesData;lastEx=ex;lastFrom=from;lastMin=min;lastMax=max;lastGeom={mL,mT,pw,ph};
+  renderMarketCharts(ym('1750-01'));
 }
-let dragging=false,lastX=0;function onDown(e){dragging=true;lastX=canvasPos(e).x;hideTooltip()}function onMove(e){const p=canvasPos(e);if(dragging){const dx=p.x-lastX;lastX=p.x;const w=chart.width;const pw=w-68-14;const monthsPerPx=winLen/pw;const dM=Math.round(-dx*monthsPerPx);const fullFrom=ym('1750-01');const fullTo=ym('2099-12');winStart=Math.min(Math.max(fullFrom,winStart+dM),fullTo-winLen);predict()}else{if(!pinned)hoverAt(p.x,p.y)}}function onUp(){dragging=false}
+let dragging=false,lastX=0;function onDown(e){dragging=true;lastX=canvasPos(e).x;hideTooltip()}function onMove(e){const p=canvasPos(e);if(dragging){const dx=p.x-lastX;lastX=p.x;const w=900;const pw=w-68-14;const monthsPerPx=winLen/pw;const dM=Math.round(-dx*monthsPerPx);const fullFrom=ym('1750-01');const fullTo=ym('2099-12');winStart=Math.min(Math.max(fullFrom,winStart+dM),fullTo-winLen);predict()}else{if(e.target===chart&&!pinned)hoverAt(p.x,p.y)}}function onUp(){dragging=false}
 const tooltipEl=document.getElementById('tooltip');
 tooltipEl.style.pointerEvents='none';
 const chartWrap=document.querySelector('.chartWrap');
@@ -367,7 +368,7 @@ function hoverAt(x,y){if(!lastGeom){return}const {mL,mT,pw,ph}=lastGeom;const in
   }
 }
 let lastClickedEv=null;
-function onClick(e){const p=canvasPos(e);const hit=findHit(p.x,p.y);if(hit){lastClickedEv=hit.e;showEventInfo(hit.e)}}
+function onClick(e){const p=canvasPos(e);const hit=findHit(p.x,p.y);if(hit){lastClickedEv=hit.e;showEventInfo(hit.e);renderMarketCharts(ym('1750-01'))}}
 const eventInfoPanel=document.getElementById('eventInfoPanel');
 const eventInfoEl=document.getElementById('eventInfo');
 function showEventInfo(ev){const lang=langSel.value||'zh';const L=I18N[lang]||I18N.zh;const s=eventSentiment(ev);const sentimentTxt=s==='neg'?(L.neg||'负面'):s==='pos'?(L.pos||'正面'):(L.neutral||'中性');const typeMap=L.typeNames||{struct:'结构',geo:'地缘政治',up:'增长',down:'下跌'};
@@ -390,7 +391,7 @@ regionCheckboxes.forEach(cb=>{
   cb.addEventListener('change', ()=>{if(!queryMode)predict()});
   cb.addEventListener('click', (e)=>{if(queryMode){e.preventDefault();setQuery('region')}});
 });
-function onWheel(e){e.preventDefault();try{const p=canvasPos(e);const dir=e.deltaY>0?1:-1;const factor=dir>0?1.15:1/1.15;const minLen=5*12,maxLen=80*12;let center=winStart+winLen/2;if(lastGeom){const {mL,pw}=lastGeom;const rel=(p.x-mL)/pw;center=winStart+Math.round(rel*winLen)}winLen=Math.min(Math.max(Math.round(winLen*factor),minLen),maxLen);const fullFrom=ym('1750-01');const fullTo=ym('2099-12');winStart=Math.round(center-winLen/2);winStart=Math.min(Math.max(fullFrom,winStart),fullTo-winLen);hoverEv=null;hideTooltip();predict();hoverAt(p.x,p.y)}catch(e){console.error(e)}}
+function onWheel(e){e.preventDefault();try{const p=canvasPos(e);const dir=e.deltaY>0?1:-1;const factor=dir>0?1.15:1/1.15;const minLen=5*12,maxLen=80*12;let center=winStart+winLen/2;if(lastGeom){const {mL,pw}=lastGeom;const rel=(p.x-mL)/pw;center=winStart+Math.round(rel*winLen)}winLen=Math.min(Math.max(Math.round(winLen*factor),minLen),maxLen);const fullFrom=ym('1750-01');const fullTo=ym('2099-12');winStart=Math.round(center-winLen/2);winStart=Math.min(Math.max(fullFrom,winStart),fullTo-winLen);hoverEv=null;hideTooltip();predict();if(e.target===chart)hoverAt(p.x,p.y)}catch(e){console.error(e)}}
 function advice(tCrash,tBoom){let text='';const now=ym(new Date().getFullYear()+"-"+String(new Date().getMonth()+1).padStart(2,'0'));const L=I18N[langSel.value]||I18N.zh;if(tCrash&&tCrash-now<=12){text+=L.advRisk12}else if(tCrash&&tCrash-now<=24){text+=L.advRisk24}else if(tCrash){text+=L.advRiskLong}if(tBoom&&tBoom-now<=12){text+=(text?' ':'')+L.advStrong12}else if(tBoom){text+=(text?' ':'')+L.advStrongLong}else if(!text){text=L.advNeutral}adviceEl.textContent=text}
 trainBtn.onclick=()=>{
   // Find which region to train. Priority: Single checked region > Global > First checked
@@ -706,16 +707,38 @@ function evName(e){
 const evalBtn=document.getElementById('eval');
 const eventsTable=document.getElementById('eventsTable');
 const evalInfo=document.getElementById('evalInfo');
-function evaluate(){const from=ym('1750-01');const to=ym('2024-12');const arr=seriesGlobal(from,to);let min=1e9,max=-1e9;for(let i=0;i<arr.length;i++){if(arr[i]<min)min=arr[i];if(arr[i]>max)max=arr[i]}const norm=(v)=>Math.abs((v-min)/(max-min));const keys=['us','europe','asia','emerging'];const thH=keys.map(k=>MODELS[k].thHigh).reduce((a,b)=>a+b,0)/keys.length;const thL=keys.map(k=>MODELS[k].thLow).reduce((a,b)=>a+b,0)/keys.length;const ex=extremes(arr,from,thH,thL);eventsTable.innerHTML='';const L=I18N[langSel.value]||I18N.zh;let totalDelta=0,totalMag=0,validCount=0;const sortedEvents=[...events].sort((a,b)=>a.month-b.month);for(let i=0;i<sortedEvents.length;i++){const e=sortedEvents[i];const s=eventSentiment(e);const trend=(s==='pos'?'up':(s==='neg'?'down':'none'));const domain=e.domain || (e.type==='geo'?'geo':'financial');const region=e.region||'global';let target=trend==='up'?ex.peaks:(trend==='down'?ex.troughs:ex.peaks.concat(ex.troughs));let best=null,bd=null;if(target.length>0){let minD=1e9;for(let j=0;j<target.length;j++){const d=Math.abs(target[j].t-e.month);if(d<minD){minD=d;best=target[j]}}if(minD<=60){bd=minD}else{best=null;bd=null}}const mPred=norm(compositeGlobal(e.month));const mDiff=Math.abs(mPred-e.impact);if(bd!==null){totalDelta+=bd;validCount++}totalMag+=mDiff;const tr=document.createElement('tr');function td(t){const x=document.createElement('td');x.style.padding='6px';x.textContent=t;return x}const typeMap=L.typeNames||{struct:'结构',geo:'地缘政治',up:'增长',down:'下跌'};const domainMap=L.domainNames||{fin:'财经',geo:'地缘政治'};const regionMap=L.regionNames||{};tr.appendChild(td(evName(e)));tr.appendChild(td(regionMap[region]||region));tr.appendChild(td(domainMap[domain]||domain));tr.appendChild(td(trend==='none'?'-':(typeMap[trend]||trend)));tr.appendChild(td(e.date));tr.appendChild(td(e.impact.toFixed(2)));tr.appendChild(td(best?fromm(best.t):'-'));tr.appendChild(td(bd!==null?String(bd):'-'));tr.appendChild(td(mPred.toFixed(2)));tr.appendChild(td(mDiff.toFixed(2)));eventsTable.appendChild(tr)}evalInfo.textContent=(L.avgDelta||'平均时间差 ')+(validCount>0?(totalDelta/validCount).toFixed(1):'-')+(L.avgImpact||' 月 | 平均影响差 ')+(totalMag/events.length).toFixed(2)}
+function getMarketTrend(dateStr){
+    const m = ym(dateStr);
+    const start = ym('1750-01');
+    const idx = m - start;
+    if(idx < 0) return '-';
+    const lookback = 12;
+    if(idx < lookback) return '-';
+    function check(arr){
+        if(!arr || idx>=arr.length) return '-';
+        const vNow = arr[idx];
+        const vPrev = arr[idx-lookback];
+        const pct = (vNow - vPrev)/vPrev;
+        if(pct > 0.05) return '↑'; 
+        if(pct < -0.05) return '↓'; 
+        return '→';
+    }
+    const s = check(MARKET_DATA.stock);
+    const g = check(MARKET_DATA.gold);
+    const o = check(MARKET_DATA.oil);
+    return `S${s} G${g} O${o}`;
+}
+function evaluate(){const from=ym('1750-01');const to=ym('2024-12');const arr=seriesGlobal(from,to);let min=1e9,max=-1e9;for(let i=0;i<arr.length;i++){if(arr[i]<min)min=arr[i];if(arr[i]>max)max=arr[i]}const norm=(v)=>Math.abs((v-min)/(max-min));const keys=['us','europe','asia','emerging'];const thH=keys.map(k=>MODELS[k].thHigh).reduce((a,b)=>a+b,0)/keys.length;const thL=keys.map(k=>MODELS[k].thLow).reduce((a,b)=>a+b,0)/keys.length;const ex=extremes(arr,from,thH,thL);eventsTable.innerHTML='';const L=I18N[langSel.value]||I18N.zh;let totalDelta=0,totalMag=0,validCount=0;const sortedEvents=[...events].sort((a,b)=>a.month-b.month);for(let i=0;i<sortedEvents.length;i++){const e=sortedEvents[i];const s=eventSentiment(e);const trend=(s==='pos'?'up':(s==='neg'?'down':'none'));const domain=e.domain || (e.type==='geo'?'geo':'financial');const region=e.region||'global';let target=trend==='up'?ex.peaks:(trend==='down'?ex.troughs:ex.peaks.concat(ex.troughs));let best=null,bd=null;if(target.length>0){let minD=1e9;for(let j=0;j<target.length;j++){const d=Math.abs(target[j].t-e.month);if(d<minD){minD=d;best=target[j]}}if(minD<=60){bd=minD}else{best=null;bd=null}}const mPred=norm(compositeGlobal(e.month));const mDiff=Math.abs(mPred-e.impact);if(bd!==null){totalDelta+=bd;validCount++}totalMag+=mDiff;const tr=document.createElement('tr');function td(t){const x=document.createElement('td');x.style.padding='6px';x.textContent=t;return x}const typeMap=L.typeNames||{struct:'结构',geo:'地缘政治',up:'增长',down:'下跌'};const domainMap=L.domainNames||{fin:'财经',geo:'地缘政治'};const regionMap=L.regionNames||{};tr.appendChild(td(evName(e)));tr.appendChild(td(regionMap[region]||region));tr.appendChild(td(domainMap[domain]||domain));tr.appendChild(td(trend==='none'?'-':(typeMap[trend]||trend)));tr.appendChild(td(e.date));tr.appendChild(td(e.impact.toFixed(2)));tr.appendChild(td(best?fromm(best.t):'-'));tr.appendChild(td(bd!==null?String(bd):'-'));tr.appendChild(td(mPred.toFixed(2)));tr.appendChild(td(mDiff.toFixed(2)));tr.appendChild(td(getMarketTrend(e.date)));eventsTable.appendChild(tr)}evalInfo.textContent=(L.avgDelta||'平均时间差 ')+(validCount>0?(totalDelta/validCount).toFixed(1):'-')+(L.avgImpact||' 月 | 平均影响差 ')+(totalMag/events.length).toFixed(2)}
 evalBtn.onclick=()=>evaluate();
 const themeSel=document.getElementById('theme');
 const langSel=document.getElementById('lang');
 const I18N={
-zh:{predict:'预测',events:'事件评估',train:'训练模型',calc:'计算预测',view:'视图',theme:'主题',lang:'语言',save:'保存模型',load:'导入模型',export:'导出模型',nextCrash:'下一次全球危机：',nextBoom:'下一次机遇（高点）时间：',advice:'建议：',statusGen:'第 ',statusDone:'训练完成 ',error:'误差 ',cv:' | CV ',eventsTitle:'历史事件评估',eval:'生成评估',avgDelta:'平均时间差 ',avgImpact:' 月 | 平均影响差 ',regionNames:{global:'全球',us:'美国',europe:'欧洲',asia:'亚洲',emerging:'新兴市场',energy:'能源',tech:'科技',geo:'地缘',financial:'金融',policy:'政策',macro:'宏观'},themeNames:{dark:'深色',light:'浅色'},th:{name:'名称',type:'类别',date:'时间',impact:'真实影响',modelTime:'模型极值时间',delta:'时间差(月)',modelImpact:'模型影响',impactDiff:'影响差'},advRisk12:'未来12个月内可能出现系统性风险。提高现金比重、分散资产、关注优质债券与防御板块。',advRisk24:'未来1-2年风险窗口可能打开。逐步降低杠杆，保留流动性，设置止损。',advRiskLong:'长期周期显示下行压力。建议保持长期稳健配置，关注避险资产。',advStrong12:'可能出现阶段性强势。考虑分批建仓优质资产，控制仓位。',advStrongLong:'长期趋势向上，但短期需等待回调机会。',advNeutral:'未检测到近端显著信号。保持均衡配置与动态再平衡。',typeNames:{struct:'结构',geo:'地缘政治',up:'上涨',down:'下跌'},tpDate:'时间',tpImpact:'影响'},
-en:{predict:'Forecast',events:'Event Evaluation',train:'Train Model',calc:'Compute Forecast',view:'View',theme:'Theme',lang:'Language',save:'Save Model',load:'Import Model',export:'Export Model',nextCrash:'Next Global Crisis: ',nextBoom:'Next boom (high) time: ',advice:'Advice: ',statusGen:'Gen ',statusDone:'Training done ',error:'Error ',cv:' | CV ',eventsTitle:'Historical Events Evaluation',eval:'Generate Evaluation',avgDelta:'Avg time delta ',avgImpact:' mo | Avg impact delta ',regionNames:{global:'Global',us:'US',europe:'Europe',asia:'Asia',emerging:'Emerging',energy:'Energy',tech:'Tech',geo:'Geo',financial:'Financial',policy:'Policy',macro:'Macro'},themeNames:{dark:'Dark',light:'Light'},th:{name:'Name',type:'Type',date:'Date',impact:'True Impact',modelTime:'Model Extremum',delta:'Delta (mo)',modelImpact:'Model Impact',impactDiff:'Impact Delta'},advRisk12:'Potential systemic risk within 12 months. Raise cash, diversify, consider bonds/defensive.',advRisk24:'Risk window may open in 1–2 years. Reduce leverage, keep liquidity, set stops.',advRiskLong:'Long-term cycle suggests downward pressure. Maintain prudent allocation.',advStrong12:'Potential strength within 12 months. Consider staged accumulation, control exposure.',advStrongLong:'Long-term trend is up, wait for pullbacks.',advNeutral:'No near-term strong signal detected. Keep balanced allocation and rebalance.',typeNames:{struct:'Structural',geo:'Geopolitical',up:'Up',down:'Down'},tpDate:'Date',tpImpact:'Impact',tpHigh:'High',tpLow:'Low'},
-fr:{predict:'Prévision',events:'Évaluation des événements',train:'Entraîner le modèle',calc:'Calculer la prévision',view:'Vue',theme:'Thème',lang:'Langue',save:'Enregistrer le modèle',load:'Importer le modèle',export:'Exporter le modèle',nextCrash:'Prochaine crise (bas) : ',nextBoom:'Prochain boom (haut) : ',advice:'Conseil : ',statusGen:'Génération ',statusDone:'Entraînement terminé ',error:'Erreur ',cv:' | CV ',eventsTitle:'Évaluation des événements historiques',eval:`Générer l'évaluation`,avgDelta:'Δ temps moyen ',avgImpact:' mois | Δ impact moyen ',regionNames:{global:'Global',us:'États-Unis',europe:'Europe',asia:'Asie',emerging:'Marchés émergents',energy:'Énergie',tech:'Tech',geo:'Géo',financial:'Financier',policy:'Politique',macro:'Macro'},themeNames:{dark:'Sombre',light:'Clair'},th:{name:'Nom',type:'Type',date:'Date',impact:'Impact réel',modelTime:'Extrémum du modèle',delta:'Δ (mois)',modelImpact:'Impact du modèle',impactDiff:`Δ d'impact`},advRisk12:'Risque systémique possible sous 12 mois. Augmenter la trésorerie, diversifier, obligations/défensif.',advRisk24:`Fenêtre de risque possible dans 1–2 ans. Réduire l'effet de levier, garder la liquidité.`,advStrong12:'Force possible sous 12 mois. Entrées progressives sur actifs de qualité, contrôle de l’exposition.',advNeutral:'Aucun signal fort à court terme. Allocation équilibrée et rééquilibrage.',typeNames:{struct:'Structurel',geo:'Géopolitique',up:'Hausse',down:'Baisse'},tpDate:'Date',tpImpact:'Impact',tpHigh:'Haut',tpLow:'Bas'},
-de:{predict:'Prognose',events:'Ereignisbewertung',train:'Modell trainieren',calc:'Prognose berechnen',view:'Ansicht',theme:'Thema',lang:'Sprache',save:'Modell speichern',load:'Modell importieren',export:'Modell exportieren',nextCrash:'Nächste Krise (Tief): ',nextBoom:'Nächster Aufschwung (Hoch): ',advice:'Empfehlung: ',statusGen:'Generation ',statusDone:'Training abgeschlossen ',error:'Fehler ',cv:' | CV ',eventsTitle:'Bewertung historischer Ereignisse',eval:'Bewertung erstellen',avgDelta:'Durchschnittliche Zeitabweichung ',avgImpact:' Mon. | Durchschnittliche Impact‑Abweichung ',regionNames:{global:'Global',us:'USA',europe:'Europa',asia:'Asien',emerging:'Emerging Markets',energy:'Energie',tech:'Tech',geo:'Geopolitik',financial:'Finanzen',policy:'Politik',macro:'Makro'},themeNames:{dark:'Dunkel',light:'Hell'},th:{name:'Name',type:'Typ',date:'Datum',impact:'Reale Wirkung',modelTime:'Modell‑Extremum',delta:'Abw. (Mon.)',modelImpact:'Modellwirkung',impactDiff:'Wirkungs‑Abw.'},advRisk12:'Systemisches Risiko innerhalb von 12 Monaten möglich. Liquidität erhöhen, diversifizieren, Anleihen/Defensive.',advRisk24:'Risikofenster in 1–2 Jahren möglich. Hebel reduzieren, Liquidität halten, Stopps setzen.',advStrong12:'Mögliche Stärke innerhalb von 12 Monaten. Staffelkäufe in Qualitätswerte, Positionskontrolle.',advNeutral:'Kein starker Kurzfristsignal. Ausgewogene Allokation und Rebalancing.',typeNames:{struct:'Strukturell',geo:'Geopolitisch',up:'Anstieg',down:'Rückgang'},tpDate:'Datum',tpImpact:'Wirkung',tpHigh:'Hoch',tpLow:'Tief'}}
+zh:{predict:'预测',events:'事件评估',train:'训练模型',calc:'计算预测',view:'视图',theme:'主题',lang:'语言',save:'保存模型',load:'导入模型',export:'导出模型',nextCrash:'下一次全球危机：',nextBoom:'下一次机遇（高点）时间：',advice:'建议：',statusGen:'第 ',statusDone:'训练完成 ',error:'误差 ',cv:' | CV ',eventsTitle:'历史事件评估',eval:'生成评估',avgDelta:'平均时间差 ',avgImpact:' 月 | 平均影响差 ',regionNames:{global:'全球',us:'美国',europe:'欧洲',asia:'亚洲',emerging:'新兴市场',energy:'能源',tech:'科技',geo:'地缘',financial:'金融',policy:'政策',macro:'宏观'},themeNames:{dark:'深色',light:'浅色'},th:{name:'名称',type:'类别',date:'时间',impact:'真实影响',modelTime:'模型极值时间',delta:'时间差(月)',modelImpact:'模型影响',impactDiff:'影响差',market:'市场数据摘要'},advRisk12:'未来12个月内可能出现系统性风险。提高现金比重、分散资产、关注优质债券与防御板块。',advRisk24:'未来1-2年风险窗口可能打开。逐步降低杠杆，保留流动性，设置止损。',advRiskLong:'长期周期显示下行压力。建议保持长期稳健配置，关注避险资产。',advStrong12:'可能出现阶段性强势。考虑分批建仓优质资产，控制仓位。',advStrongLong:'长期趋势向上，但短期需等待回调机会。',advNeutral:'未检测到近端显著信号。保持均衡配置与动态再平衡。',typeNames:{struct:'结构',geo:'地缘政治',up:'上涨',down:'下跌'},tpDate:'时间',tpImpact:'影响'},
+en:{predict:'Forecast',events:'Event Evaluation',train:'Train Model',calc:'Compute Forecast',view:'View',theme:'Theme',lang:'Language',save:'Save Model',load:'Import Model',export:'Export Model',nextCrash:'Next Global Crisis: ',nextBoom:'Next boom (high) time: ',advice:'Advice: ',statusGen:'Gen ',statusDone:'Training done ',error:'Error ',cv:' | CV ',eventsTitle:'Historical Events Evaluation',eval:'Generate Evaluation',avgDelta:'Avg time delta ',avgImpact:' mo | Avg impact delta ',regionNames:{global:'Global',us:'US',europe:'Europe',asia:'Asia',emerging:'Emerging',energy:'Energy',tech:'Tech',geo:'Geo',financial:'Financial',policy:'Policy',macro:'Macro'},themeNames:{dark:'Dark',light:'Light'},th:{name:'Name',type:'Type',date:'Date',impact:'True Impact',modelTime:'Model Extremum',delta:'Delta (mo)',modelImpact:'Model Impact',impactDiff:'Impact Delta',market:'Market Summary'},advRisk12:'Potential systemic risk within 12 months. Raise cash, diversify, consider bonds/defensive.',advRisk24:'Risk window may open in 1–2 years. Reduce leverage, keep liquidity, set stops.',advRiskLong:'Long-term cycle suggests downward pressure. Maintain prudent allocation.',advStrong12:'Potential strength within 12 months. Consider staged accumulation, control exposure.',advStrongLong:'Long-term trend is up, wait for pullbacks.',advNeutral:'No near-term strong signal detected. Keep balanced allocation and rebalance.',typeNames:{struct:'Structural',geo:'Geopolitical',up:'Up',down:'Down'},tpDate:'Date',tpImpact:'Impact',tpHigh:'High',tpLow:'Low'},
+fr:{predict:'Prévision',events:'Évaluation des événements',train:'Entraîner le modèle',calc:'Calculer la prévision',view:'Vue',theme:'Thème',lang:'Langue',save:'Enregistrer le modèle',load:'Importer le modèle',export:'Exporter le modèle',nextCrash:'Prochaine crise (bas) : ',nextBoom:'Prochain boom (haut) : ',advice:'Conseil : ',statusGen:'Génération ',statusDone:'Entraînement terminé ',error:'Erreur ',cv:' | CV ',eventsTitle:'Évaluation des événements historiques',eval:`Générer l'évaluation`,avgDelta:'Δ temps moyen ',avgImpact:' mois | Δ impact moyen ',regionNames:{global:'Global',us:'États-Unis',europe:'Europe',asia:'Asie',emerging:'Marchés émergents',energy:'Énergie',tech:'Tech',geo:'Géo',financial:'Financier',policy:'Politique',macro:'Macro'},themeNames:{dark:'Sombre',light:'Clair'},th:{name:'Nom',type:'Type',date:'Date',impact:'Impact réel',modelTime:'Extrémum du modèle',delta:'Δ (mois)',modelImpact:'Impact du modèle',impactDiff:`Δ d'impact`,market:'Résumé du marché'},advRisk12:'Risque systémique possible sous 12 mois. Augmenter la trésorerie, diversifier, obligations/défensif.',advRisk24:`Fenêtre de risque possible dans 1–2 ans. Réduire l'effet de levier, garder la liquidité.`,advStrong12:'Force possible sous 12 mois. Entrées progressives sur actifs de qualité, contrôle de l’exposition.',advNeutral:'Aucun signal fort à court terme. Allocation équilibrée et rééquilibrage.',typeNames:{struct:'Structurel',geo:'Géopolitique',up:'Hausse',down:'Baisse'},tpDate:'Date',tpImpact:'Impact',tpHigh:'Haut',tpLow:'Bas'},
+de:{predict:'Prognose',events:'Ereignisbewertung',train:'Modell trainieren',calc:'Prognose berechnen',view:'Ansicht',theme:'Thema',lang:'Sprache',save:'Modell speichern',load:'Modell importieren',export:'Modell exportieren',nextCrash:'Nächste Krise (Tief): ',nextBoom:'Nächster Aufschwung (Hoch): ',advice:'Empfehlung: ',statusGen:'Generation ',statusDone:'Training abgeschlossen ',error:'Fehler ',cv:' | CV ',eventsTitle:'Bewertung historischer Ereignisse',eval:'Bewertung erstellen',avgDelta:'Durchschnittliche Zeitabweichung ',avgImpact:' Mon. | Durchschnittliche Impact‑Abweichung ',regionNames:{global:'Global',us:'USA',europe:'Europa',asia:'Asien',emerging:'Emerging Markets',energy:'Energie',tech:'Tech',geo:'Geopolitik',financial:'Finanzen',policy:'Politik',macro:'Makro'},themeNames:{dark:'Dunkel',light:'Hell'},th:{name:'Name',type:'Typ',date:'Datum',impact:'Reale Wirkung',modelTime:'Modell‑Extremum',delta:'Abw. (Mon.)',modelImpact:'Modellwirkung',impactDiff:'Wirkungs‑Abw.',market:'Marktübersicht'},advRisk12:'Systemisches Risiko innerhalb von 12 Monaten möglich. Liquidität erhöhen, diversifizieren, Anleihen/Defensive.',advRisk24:'Risikofenster in 1–2 Jahren möglich. Hebel reduzieren, Liquidität halten, Stopps setzen.',advStrong12:'Mögliche Stärke innerhalb von 12 Monaten. Staffelkäufe in Qualitätswerte, Positionskontrolle.',advNeutral:'Kein starker Kurzfristsignal. Ausgewogene Allokation und Rebalancing.',typeNames:{struct:'Strukturell',geo:'Geopolitisch',up:'Anstieg',down:'Rückgang'},tpDate:'Datum',tpImpact:'Wirkung',tpHigh:'Hoch',tpLow:'Tief'}}
 // fill missing i18n keys for grid/help/query labels
+I18N.zh.fitMarket='拟合市场趋势';I18N.en.fitMarket='Fit Market Trend';I18N.fr.fitMarket='Ajuster au marché';I18N.de.fitMarket='Markttrend anpassen';
 I18N.zh.grid='网格';I18N.en.grid='Grid';I18N.fr.grid='Grille';I18N.de.grid='Raster';
 I18N.zh.help='帮助';I18N.en.help='Help';I18N.fr.help='Aide';I18N.de.help='Hilfe';
 I18N.zh.helpTitle='帮助';I18N.en.helpTitle='Help';I18N.fr.helpTitle='Aide';I18N.de.helpTitle='Hilfe';
@@ -769,6 +792,7 @@ function applyLangFinal(){
   document.getElementById('thDelta').textContent=L.th.delta;
   document.getElementById('thModelImpact').textContent=L.th.modelImpact;
   document.getElementById('thImpactDiff').textContent=L.th.impactDiff;
+  document.getElementById('thMarket').textContent=L.th.market||'Market';
   document.getElementById('train').textContent=L.train;
   document.getElementById('lblRegion').textContent=L.regionLabel||'Region';
   document.getElementById('lblDomain').textContent=L.domainLabel||'Domain';
@@ -777,6 +801,7 @@ function applyLangFinal(){
   document.getElementById('helpTitle').textContent=(L.helpTitle||'帮助');
   document.getElementById('queryTitle').textContent=(L.queryTitle||'查询说明');
   document.getElementById('lblGrid').textContent=(L.grid||'网格');
+  document.getElementById('lblFitMarket').textContent=(L.fitMarket||'拟合市场趋势');
   const ei=document.getElementById('eventInfoTitle');
   if(ei){const lang=langSel.value||'zh';ei.textContent=(L.eventInfo)||((lang==='zh')?'事件详情':'Event Details')}
   document.getElementById('saveModel').textContent=L.save;
@@ -812,13 +837,15 @@ function applyLangFinal(){
 }
 document.body.classList.toggle('light',themeSel.value==='light');
 applyLangFinal();
-chart.addEventListener('mousedown',onDown);
-chart.addEventListener('mousemove',onMove);
-chart.addEventListener('mouseup',onUp);
-chart.addEventListener('click',onClick);
-chart.addEventListener('mouseleave',()=>{onUp();if(!pinned)hideTooltip()});
-// regionSel listener removed
-chart.addEventListener('wheel',onWheel,{passive:false});
+[chart].forEach(c=>{
+  if(!c) return;
+  c.addEventListener('mousedown',onDown);
+  c.addEventListener('mousemove',onMove);
+  c.addEventListener('mouseup',onUp);
+  if(c===chart) c.addEventListener('click',onClick);
+  c.addEventListener('mouseleave',()=>{onUp();if(c===chart&&!pinned)hideTooltip()});
+  c.addEventListener('wheel',onWheel,{passive:false});
+});
 themeSel.addEventListener('change',()=>{document.body.classList.toggle('light',themeSel.value==='light');renderView(lastSeriesData,lastFrom,lastEx)});
 gridSel.addEventListener('change',()=>{showGrid=gridSel.checked;predict()});
 queryBtn.addEventListener('click',()=>{queryMode=!queryMode;queryPanel.style.display=queryMode?'block':'none';queryBtn.classList.toggle('query-on',queryMode)});
@@ -841,6 +868,7 @@ loadModelBtn.onclick=()=>{loadModelFile.click()};
 loadModelFile.onchange=(e)=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(j&&j.us&&j.europe){for(let k in MODELS){MODELS[k]=j[k]||MODELS[k]}}else if(j&&j.a&&j.ph){for(let k in MODELS)MODELS[k]=JSON.parse(JSON.stringify(j))}predict()}catch{}};r.readAsText(f)};
 exportModelBtn.onclick=()=>{const blob=new Blob([JSON.stringify(MODELS)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='model.json';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)};resetModelBtn.onclick=()=>{if(confirm('重置模型将清除所有训练数据并恢复默认设置，确定吗？')){localStorage.removeItem('forecast_models_v2');localStorage.removeItem('forecast_model');location.reload()}};
 async function boot(){
+  initMarketCharts();
   console.log("Forecast App v3.0 loaded");
   const valid=(p)=>p&&Array.isArray(p.a)&&Array.isArray(p.ph)&&p.a.length===P.length&&typeof p.k==='number'&&typeof p.sigma==='number';
   let loaded=false;
@@ -914,6 +942,383 @@ async function boot(){
       loaded=true;
   }
   
+  generateMarketData();
   predict();
 }
+
+// Market Data Chart Support
+let chartStock, ctxStock;
+let chartGold, ctxGold;
+let chartOil, ctxOil;
+
+const checkStock = document.getElementById('checkStock');
+const checkGold = document.getElementById('checkGold');
+const checkOil = document.getElementById('checkOil');
+
+let MARKET_DATA = {stock:[], gold:[], oil:[]};
+
+function initMarketCharts(){
+    chartStock = document.getElementById('chartStock');
+    chartGold = document.getElementById('chartGold');
+    chartOil = document.getElementById('chartOil');
+    
+    if(!chartStock || !chartGold || !chartOil) {
+        return;
+    }
+
+    ctxStock = chartStock.getContext('2d');
+    ctxGold = chartGold.getContext('2d');
+    ctxOil = chartOil.getContext('2d');
+    
+    [chartStock, chartGold, chartOil].forEach(c => {
+        if(!c) return;
+        c.addEventListener('mousedown',onDown);
+        c.addEventListener('mousemove',onMove);
+        c.addEventListener('mouseup',onUp);
+        c.addEventListener('mouseleave',()=>{onUp();});
+        c.addEventListener('wheel',onWheel,{passive:false});
+    });
+
+    const stockIndexSel = document.getElementById('stockIndexSel');
+    if(stockIndexSel){
+        stockIndexSel.addEventListener('change', ()=>{
+             if(typeof renderView === 'function') renderView();
+        });
+    }
+
+    // Add listeners to market checkboxes
+    [checkStock, checkGold, checkOil].forEach(cb => {
+        if(cb) cb.addEventListener('change', ()=>renderMarketCharts(ym('1750-01')));
+    });
+}
+
+function generateMarketData(){
+    const start=ym('1750-01');
+    const end=ym('2099-12');
+    const len=end-start+1;
+    
+    function getM(dy){
+        const y=Math.floor(dy);
+        const m=Math.round((dy-y)*12);
+        return (y-baseY)*12+m;
+    }
+
+    function interpolate(src){
+        if(!src) return new Array(len).fill(0);
+        const res = new Array(len).fill(NaN);
+        
+        // Populate known points
+        for(let i=0; i<src.length; i++){
+            const [dy, val] = src[i];
+            const idx = getM(dy) - start;
+            if(idx >= 0 && idx < len){
+                res[idx] = val;
+            }
+        }
+        
+        // Linear interpolation for gaps
+        let lastIdx = -1;
+        for(let i=0; i<len; i++){
+            if(!isNaN(res[i])){
+                if(lastIdx !== -1 && i > lastIdx + 1){
+                    const v1 = res[lastIdx];
+                    const v2 = res[i];
+                    const steps = i - lastIdx;
+                    const dV = (v2 - v1) / steps;
+                    for(let j=1; j<steps; j++){
+                        res[lastIdx+j] = v1 + dV*j;
+                    }
+                }
+                lastIdx = i;
+            }
+        }
+        
+        // Fill edges
+        // Find first valid
+        let firstValid = -1;
+        for(let i=0; i<len; i++){
+            if(!isNaN(res[i])){ firstValid=i; break; }
+        }
+        if(firstValid > 0){
+            for(let i=0; i<firstValid; i++) res[i] = res[firstValid];
+        }
+        
+        // Find last valid
+        let lastValid = -1;
+        for(let i=len-1; i>=0; i--){
+            if(!isNaN(res[i])){ lastValid=i; break; }
+        }
+        if(lastValid !== -1 && lastValid < len-1){
+            for(let i=lastValid+1; i<len; i++) res[i] = res[lastValid];
+        }
+        
+        // Fallback for completely empty
+        if(firstValid === -1){
+            return new Array(len).fill(0);
+        }
+
+        return res;
+    }
+
+    if(typeof MARKET_SOURCE !== 'undefined'){
+        MARKET_DATA.stock_sp500 = interpolate(MARKET_SOURCE.stock);
+        // Shanghai is annual: [[1990, 127], ...] -> Treat as 1990.0
+        MARKET_DATA.stock_shanghai = interpolate(MARKET_SOURCE.shanghai.map(x=>[x[0], x[1]])); 
+        MARKET_DATA.gold = interpolate(MARKET_SOURCE.gold);
+        MARKET_DATA.oil = interpolate(MARKET_SOURCE.oil);
+        MARKET_DATA.stock = MARKET_DATA.stock_sp500;
+    }
+}
+generateMarketData();
+
+function renderMarketCharts(from){
+    const stockIndexSel = document.getElementById('stockIndexSel');
+    const stockType = stockIndexSel ? stockIndexSel.value : 'sp500';
+    if(stockType === 'shanghai') MARKET_DATA.stock = MARKET_DATA.stock_shanghai;
+    else MARKET_DATA.stock = MARKET_DATA.stock_sp500;
+
+    const list = [
+        {ctx: ctxStock, arr: MARKET_DATA.stock, check: checkStock, color: '#3b82f6'},
+        {ctx: ctxGold, arr: MARKET_DATA.gold, check: checkGold, color: '#eab308'},
+        {ctx: ctxOil, arr: MARKET_DATA.oil, check: checkOil, color: '#ef4444'}
+    ];
+
+    const dpr = window.devicePixelRatio || 1;
+    const w = 900;
+    const h = 150;
+    const mL=60, mR=20, mT=20, mB=30;
+    const pw=w-mL-mR, ph=h-mT-mB;
+    const iStart=Math.max(0,winStart-from);
+    const iEnd=Math.min(list[0].arr.length-1,iStart+winLen);
+    const fxm=(m)=>mL+(m-winStart)/winLen*pw;
+
+    // Helper for nice ticks
+    function getNiceTicks(min, max, count=5){
+        if(min===max) return [min];
+        const range = max-min;
+        const roughStep = range/(count-1);
+        const niceSteps = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
+        let step = niceSteps[0];
+        const mag = Math.pow(10, Math.floor(Math.log10(roughStep)));
+        const normalizedStep = roughStep / mag;
+        
+        if(normalizedStep < 1.5) step = 1*mag;
+        else if(normalizedStep < 3) step = 2*mag;
+        else if(normalizedStep < 7) step = 5*mag;
+        else step = 10*mag;
+
+        const start = Math.ceil(min/step)*step;
+        const res=[];
+        for(let v=start; v<=max; v+=step){
+            res.push(v);
+        }
+        return res;
+    }
+
+    list.forEach(item => {
+        const {ctx, arr, check, color} = item;
+        if(!ctx || !check) return; 
+        const cvs = ctx.canvas;
+        const container = cvs.parentElement;
+        
+        if(!check.checked){
+            container.style.display = 'none';
+            return;
+        }
+        container.style.display = 'block';
+
+        if(cvs.width !== w*dpr || cvs.height !== h*dpr){
+             cvs.width = w*dpr;
+             cvs.height = h*dpr;
+             cvs.style.width = w+'px';
+             cvs.style.height = h+'px';
+        }
+        ctx.resetTransform();
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0,0,w,h);
+        
+        // Find min/max for this window
+        let min=1e9, max=-1e9;
+        for(let i=iStart; i<=iEnd; i++){
+            const val = arr[i];
+            if(!isNaN(val)){
+                if(val<min) min=val;
+                if(val>max) max=val;
+            }
+        }
+        if(min>max){min=0;max=100}
+        if(max===min){max=min+1}
+        
+        const range = max-min;
+        min -= range*0.05;
+        max += range*0.05;
+
+        const fy=(v)=>mT+ph-(v-min)/(max-min)*ph;
+
+        const axisColor=document.body.classList.contains('light')?'#000000':'#ffffff';
+        const gridColor=document.body.classList.contains('light')?'#e2e8f0':'#334155';
+        
+        ctx.lineWidth=1;
+        ctx.font='10px sans-serif';
+        ctx.textAlign='right';
+        ctx.textBaseline='middle';
+
+        // Y-Axis Grid & Labels
+        const yTicks = getNiceTicks(min, max, 5);
+        ctx.strokeStyle=gridColor;
+        ctx.fillStyle=axisColor;
+        ctx.beginPath();
+        yTicks.forEach(v => {
+            const y = fy(v);
+            if(y>=mT && y<=mT+ph){
+                ctx.moveTo(mL, y);
+                ctx.lineTo(mL+pw, y);
+                ctx.fillText(v.toLocaleString(), mL-5, y);
+            }
+        });
+        ctx.stroke();
+
+        // X-Axis Grid & Labels
+        const yearSpan = winLen/12;
+        let yStep = 1;
+        if(yearSpan > 20) yStep = 5;
+        if(yearSpan > 50) yStep = 10;
+        if(yearSpan > 100) yStep = 20;
+
+        const startY = Math.floor((from + iStart)/12) + baseY;
+        const endY = Math.ceil((from + iEnd)/12) + baseY;
+
+        ctx.textAlign='center';
+        ctx.textBaseline='top';
+        ctx.beginPath();
+        for(let y=startY; y<=endY; y++){
+             if(y % yStep === 0){
+                 const mIndex = (y-baseY)*12;
+                 const x = fxm(mIndex);
+                 if(x>=mL && x<=mL+pw){
+                     ctx.moveTo(x, mT);
+                     ctx.lineTo(x, mT+ph);
+                     ctx.fillText(y, x, mT+ph+5);
+                 }
+             }
+        }
+        ctx.stroke();
+
+        // Axis Lines
+        ctx.strokeStyle=axisColor;
+        ctx.beginPath();
+        ctx.moveTo(mL, mT); ctx.lineTo(mL, mT+ph); ctx.lineTo(mL+pw, mT+ph);
+        ctx.stroke();
+
+        // Waveform
+        ctx.beginPath();
+        ctx.strokeStyle=color;
+        ctx.lineWidth=1.5;
+        let first=true;
+        for(let i=iStart; i<=iEnd; i++){
+             const val = arr[i];
+             if(isNaN(val)) continue;
+             const x=fxm(from+i);
+             const y=fy(val);
+             if(first){ctx.moveTo(x,y); first=false;}
+             else{ctx.lineTo(x,y);}
+        }
+        ctx.stroke();
+
+        // Highlight event
+        if(lastClickedEv){
+             const evM = lastClickedEv.month;
+             if(evM>=winStart && evM<=winStart+winLen){
+                 const x = fxm(evM);
+                 ctx.strokeStyle=axisColor;
+                 ctx.lineWidth=1;
+                 ctx.setLineDash([4,4]);
+                 ctx.beginPath();
+                 ctx.moveTo(x, mT); ctx.lineTo(x, mT+ph);
+                 ctx.stroke();
+                 ctx.setLineDash([]);
+                 
+                 const idx = evM - from;
+                 if(idx>=0 && idx<arr.length){
+                     const val = arr[idx];
+                     if(!isNaN(val)){
+                         const y = fy(val);
+                         ctx.beginPath();
+                         ctx.arc(x,y,4,0,Math.PI*2);
+                         ctx.fillStyle=color;
+                         ctx.fill();
+                         ctx.stroke();
+                     }
+                 }
+             }
+        }
+    });
+}
+
 boot();
+
+function evaluate(){
+    const from=ym('1750-01');
+    const to=ym('2024-12');
+    const arr=seriesGlobal(from,to);
+    let min=1e9,max=-1e9;
+    for(let i=0;i<arr.length;i++){
+        if(arr[i]<min)min=arr[i];
+        if(arr[i]>max)max=arr[i];
+    }
+    const norm=(v)=>Math.abs((v-min)/(max-min));
+    const keys=['us','europe','asia','emerging'];
+    const thH=keys.map(k=>MODELS[k].thHigh).reduce((a,b)=>a+b,0)/keys.length;
+    const thL=keys.map(k=>MODELS[k].thLow).reduce((a,b)=>a+b,0)/keys.length;
+    const ex=extremes(arr,from,thH,thL);
+    eventsTable.innerHTML='';
+    const L=I18N[langSel.value]||I18N.zh;
+    let totalDelta=0,totalMag=0,validCount=0;
+    const sortedEvents=[...events].sort((a,b)=>a.month-b.month);
+    
+    for(let i=0;i<sortedEvents.length;i++){
+        const e=sortedEvents[i];
+        const s=eventSentiment(e);
+        const trend=(s==='pos'?'up':(s==='neg'?'down':'none'));
+        const domain=e.domain || (e.type==='geo'?'geo':'financial');
+        const region=e.region||'global';
+        let target=trend==='up'?ex.peaks:(trend==='down'?ex.troughs:ex.peaks.concat(ex.troughs));
+        let best=null,bd=null;
+        if(target.length>0){
+            let minD=1e9;
+            for(let j=0;j<target.length;j++){
+                const d=Math.abs(target[j].t-e.month);
+                if(d<minD){minD=d;best=target[j]}
+            }
+            if(minD<=60){bd=minD}else{best=null;bd=null}
+        }
+        const mPred=norm(compositeGlobal(e.month));
+        const mDiff=Math.abs(mPred-e.impact);
+        if(bd!==null){totalDelta+=bd;validCount++}
+        totalMag+=mDiff;
+        
+        const tr=document.createElement('tr');
+        function td(t){const x=document.createElement('td');x.style.padding='6px';x.textContent=t;return x}
+        const typeMap=L.typeNames||{struct:'�ṹ',geo:'��Ե����',up:'����',down:'�µ�'};
+        const domainMap=L.domainNames||{fin:'�ƾ�',geo:'��Ե����'};
+        const regionMap=L.regionNames||{};
+        
+        tr.appendChild(td(evName(e)));
+        tr.appendChild(td(regionMap[region]||region));
+        tr.appendChild(td(domainMap[domain]||domain));
+        tr.appendChild(td(trend==='none'?'-':(typeMap[trend]||trend)));
+        tr.appendChild(td(e.date));
+        tr.appendChild(td(e.impact.toFixed(2)));
+        tr.appendChild(td(best?fromm(best.t):'-'));
+        tr.appendChild(td(bd!==null?String(bd):'-'));
+        tr.appendChild(td(mPred.toFixed(2)));
+        tr.appendChild(td(mDiff.toFixed(2)));
+        tr.appendChild(td(getMarketTrend(e.date)));
+        eventsTable.appendChild(tr);
+    }
+    const avgD=validCount>0?totalDelta/validCount:0;
+    const avgM=sortedEvents.length>0?totalMag/sortedEvents.length:0;
+    evalInfo.textContent=L.avgDelta+avgD.toFixed(1)+L.avgImpact+avgM.toFixed(2);
+}
+evalBtn.onclick=()=>evaluate();
+
