@@ -1,6 +1,6 @@
 const chart=document.getElementById('chart');
 const ctx=chart.getContext('2d');
-function canvasPos(e){const c=(e.target&&e.target.getBoundingClientRect)?e.target:chart;const rect=c.getBoundingClientRect();const w=c.width||900;const h=c.height||(c===chart?420:150);const sx=w/rect.width;const sy=h/rect.height;return {x:(e.clientX-rect.left)*sx,y:(e.clientY-rect.top)*sy}}
+function canvasPos(e){const c=(e.target&&e.target.getBoundingClientRect)?e.target:chart;const rect=c.getBoundingClientRect();const w=900;const h=(c===chart?420:150);const sx=w/rect.width;const sy=h/rect.height;return {x:(e.clientX-rect.left)*sx,y:(e.clientY-rect.top)*sy}}
 function yearStep(pw,winLen){const years=winLen/12;const pxPerYear=pw/years;const target=80;const raw=target/pxPerYear;const choices=[1,2,5,10,20,50];for(let i=0;i<choices.length;i++){if(choices[i]>=raw)return choices[i]}return choices[choices.length-1]}
 const statusEl=document.getElementById('status');
 const fitnessEl=document.getElementById('fitness');
@@ -164,12 +164,51 @@ function getEventRegion(e){
     if(usK.some(k=>name.includes(k)))return 'us';
     return 'global';
 }
+
+// Helper for nice ticks (moved to global scope)
+function getNiceTicks(min, max, count=5){
+    if(min===max) return [min];
+    const range = max-min;
+    const roughStep = range/(count-1);
+    const niceSteps = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
+    let step = niceSteps[0];
+    const mag = Math.pow(10, Math.floor(Math.log10(roughStep)));
+    const normalizedStep = roughStep / mag;
+    
+    if(normalizedStep < 1.5) step = 1*mag;
+    else if(normalizedStep < 3) step = 2*mag;
+    else if(normalizedStep < 7) step = 5*mag;
+    else step = 10*mag;
+
+    const start = Math.ceil(min/step)*step;
+    const res=[];
+    for(let v=start; v<=max; v+=step){
+        res.push(v);
+    }
+    return res;
+}
+
 function renderView(seriesData,from,ex){
   const keys=Object.keys(seriesData);
-  if(keys.length===0){ctx.clearRect(0,0,chart.width,chart.height);return}
-  ctx.clearRect(0,0,chart.width,chart.height);
-  const w=chart.width,h=chart.height;
-  const mL=68,mT=16,mR=14,mB=42;
+  
+  const dpr = window.devicePixelRatio || 1;
+  const w = 900;
+  const h = 420;
+
+  if(chart.width !== w*dpr || chart.height !== h*dpr){
+     chart.width = w*dpr;
+     chart.height = h*dpr;
+     chart.style.width = w+'px';
+     chart.style.height = h+'px';
+  }
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+
+  if(keys.length===0){ctx.clearRect(0,0,w,h);return}
+  ctx.clearRect(0,0,w,h);
+
+  // Match margins with renderMarketCharts for alignment
+  const mL=60,mT=20,mR=20,mB=30;
   const pw=w-mL-mR,ph=h-mT-mB;
   const iStart=Math.max(0,winStart-from);
   const firstArr=seriesData[keys[0]];
@@ -186,22 +225,72 @@ function renderView(seriesData,from,ex){
   if(min>max){min=-1;max=1}
   if(max-min<1e-6){max=min+1e-6}
   
+  // Fix theme detection to match Market Charts
   const axisColor=document.body.classList.contains('light')?'#000000':'#ffffff';
-  ctx.lineWidth=1.6;
+  const gridColor=document.body.classList.contains('light')?'#e2e8f0':'#334155';
+
+  ctx.lineWidth=1;
   const fxm=(m)=>mL+(m-winStart)/winLen*pw;
   const fy=(v)=>mT+ph-(v-min)/(max-min)*ph;
-  const gridColor=document.body.classList.contains('light')?'#cbd5e1':'#334155';
+  const yTicks = getNiceTicks(min, max, 5);
   
   if(showGrid){
-    ctx.save();ctx.strokeStyle=gridColor;ctx.globalAlpha=0.35;
-    for(let k=0;k<=4;k++){const v=min+(max-min)*k/4;const yy=fy(v);ctx.beginPath();ctx.moveTo(mL,yy);ctx.lineTo(mL+pw,yy);ctx.stroke()}
-    const yrStart=baseY+Math.floor(winStart/12);
-    const yrEnd=baseY+Math.floor((winStart+winLen)/12);
-    const step=yearStep(pw,winLen);
-    for(let y=yrStart-(yrStart%step);y<=yrEnd;y+=step){const m=(y-baseY)*12;const xx=fxm(m);ctx.beginPath();ctx.moveTo(xx,mT);ctx.lineTo(xx,mT+ph);ctx.stroke()}
+    ctx.save();
+    ctx.strokeStyle=gridColor;
+    ctx.fillStyle=axisColor;
+    ctx.font='10px sans-serif';
+    ctx.textAlign='right';
+    ctx.textBaseline='middle';
+
+    // Horizontal Grid & Labels (Match Market Charts)
+    for(let v of yTicks){
+        const yy=fy(v);
+        if(yy>=mT && yy<=mT+ph){
+            ctx.beginPath();
+            ctx.moveTo(mL,yy);
+            ctx.lineTo(mL+pw,yy);
+            ctx.stroke();
+            // Draw label here like Market Charts
+            ctx.fillText(v.toLocaleString(),mL-5,yy);
+        }
+    }
+
+    // Vertical Grid (Time Axis) - Match Stock Chart Logic
+    const yearSpan = winLen/12;
+    let yStep = 1;
+    if(yearSpan > 20) yStep = 5;
+    if(yearSpan > 50) yStep = 10;
+    if(yearSpan > 100) yStep = 20;
+
+    const startY = Math.floor((from + iStart)/12) + baseY;
+    const endY = Math.ceil((from + iEnd)/12) + baseY;
+
+    ctx.textAlign='center';
+    ctx.textBaseline='top';
+
+    for(let y=startY; y<=endY; y++){
+         if(y % yStep === 0){
+             const mIndex = (y-baseY)*12;
+             const xx = fxm(mIndex);
+             if(xx>=mL && xx<=mL+pw){
+                 ctx.beginPath();
+                 ctx.moveTo(xx, mT);
+                 ctx.lineTo(xx, mT+ph);
+                 ctx.stroke();
+                 ctx.fillText(String(y),xx,mT+ph+5);
+             }
+         }
+    }
     ctx.restore()
   }
-  ctx.strokeStyle=axisColor;ctx.beginPath();ctx.moveTo(mL,mT+ph);ctx.lineTo(mL,mT);ctx.lineTo(mL+pw,mT);ctx.stroke();
+  
+  // Restore L-shape border to match Market Charts
+  ctx.strokeStyle=axisColor;
+  ctx.beginPath();
+  ctx.moveTo(mL, mT); ctx.lineTo(mL, mT+ph); ctx.lineTo(mL+pw, mT+ph);
+  ctx.stroke();
+  // Removed Y-axis title to match Market Charts style
+  /*
   (function(){
     const L=I18N[langSel.value]||I18N.zh;
     ctx.save();
@@ -210,6 +299,7 @@ function renderView(seriesData,from,ex){
     ctx.fillText(L.yAxis||'模型值',0,0);
     ctx.restore()
   })()
+  */
   
   const drawOrder=keys.filter(k=>k!=='global');
   if(keys.includes('global'))drawOrder.push('global');
@@ -313,17 +403,13 @@ function renderView(seriesData,from,ex){
     ctx.beginPath();ctx.arc(hoverEv.x,hoverEv.y,hoverEv.r+3,0,Math.PI*2);ctx.stroke();
     ctx.restore()
   }
-  ctx.fillStyle=axisColor;ctx.font='12px system-ui';ctx.textAlign='center';ctx.textBaseline='top';
-  const yrStart=baseY+Math.floor(winStart/12);
-  const yrEnd=baseY+Math.floor((winStart+winLen)/12);
-  const step=yearStep(pw,winLen);
-  for(let y=yrStart-(yrStart%step);y<=yrEnd;y+=step){const m=(y-baseY)*12;const xx=fxm(m);ctx.fillText(String(y),xx,mT+ph+10)}
-  ctx.textAlign='right';ctx.textBaseline='middle';
-  for(let k=0;k<=4;k++){const v=min+(max-min)*k/4;const yy=fy(v);ctx.fillText(v.toFixed(2),mL-10,yy)}
+
+  
+
   lastSeriesData=seriesData;lastEx=ex;lastFrom=from;lastMin=min;lastMax=max;lastGeom={mL,mT,pw,ph};
   renderMarketCharts(ym('1750-01'));
 }
-let dragging=false,lastX=0;function onDown(e){dragging=true;lastX=canvasPos(e).x;hideTooltip()}function onMove(e){const p=canvasPos(e);if(dragging){const dx=p.x-lastX;lastX=p.x;const w=900;const pw=w-68-14;const monthsPerPx=winLen/pw;const dM=Math.round(-dx*monthsPerPx);const fullFrom=ym('1750-01');const fullTo=ym('2099-12');winStart=Math.min(Math.max(fullFrom,winStart+dM),fullTo-winLen);predict()}else{if(e.target===chart&&!pinned)hoverAt(p.x,p.y)}}function onUp(){dragging=false}
+let dragging=false,lastX=0;function onDown(e){dragging=true;lastX=canvasPos(e).x;hideTooltip()}function onMove(e){const p=canvasPos(e);if(dragging){const dx=p.x-lastX;lastX=p.x;const w=900;const pw=w-60-20;const monthsPerPx=winLen/pw;const dM=Math.round(-dx*monthsPerPx);const fullFrom=ym('1750-01');const fullTo=ym('2099-12');winStart=Math.min(Math.max(fullFrom,winStart+dM),fullTo-winLen);predict()}else{if(e.target===chart&&!pinned)hoverAt(p.x,p.y)}}function onUp(){dragging=false}
 const tooltipEl=document.getElementById('tooltip');
 tooltipEl.style.pointerEvents='none';
 const chartWrap=document.querySelector('.chartWrap');
@@ -982,7 +1068,7 @@ function initMarketCharts(){
     const stockIndexSel = document.getElementById('stockIndexSel');
     if(stockIndexSel){
         stockIndexSel.addEventListener('change', ()=>{
-             if(typeof renderView === 'function') renderView();
+             if(typeof renderMarketCharts === 'function') renderMarketCharts(ym('1750-01'));
         });
     }
 
@@ -1092,28 +1178,7 @@ function renderMarketCharts(from){
     const iEnd=Math.min(list[0].arr.length-1,iStart+winLen);
     const fxm=(m)=>mL+(m-winStart)/winLen*pw;
 
-    // Helper for nice ticks
-    function getNiceTicks(min, max, count=5){
-        if(min===max) return [min];
-        const range = max-min;
-        const roughStep = range/(count-1);
-        const niceSteps = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
-        let step = niceSteps[0];
-        const mag = Math.pow(10, Math.floor(Math.log10(roughStep)));
-        const normalizedStep = roughStep / mag;
-        
-        if(normalizedStep < 1.5) step = 1*mag;
-        else if(normalizedStep < 3) step = 2*mag;
-        else if(normalizedStep < 7) step = 5*mag;
-        else step = 10*mag;
 
-        const start = Math.ceil(min/step)*step;
-        const res=[];
-        for(let v=start; v<=max; v+=step){
-            res.push(v);
-        }
-        return res;
-    }
 
     list.forEach(item => {
         const {ctx, arr, check, color} = item;
