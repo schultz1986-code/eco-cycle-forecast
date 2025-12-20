@@ -87,26 +87,101 @@
 <div id="tooltip" class="tooltip"></div>
 </div>
 <div id="marketChartsArea" style="display:flex;flex-direction:column;gap:10px;margin-top:20px;">
+  
   <!-- Stock Market Chart -->
-  <div class="market-chart-container" style="position:relative;">
-    <div style="font-size:12px;font-weight:bold;margin-bottom:4px;color:#475569;display:flex;align-items:center;gap:8px">
-      <span>股市大盘 (Stock Market)</span>
-      <select id="stockIndexSel" style="font-size:11px;padding:2px">
-        <option value="sp500">S&P 500 (US)</option>
-        <option value="shanghai">上证指数 (CN)</option>
-      </select>
+  <div class="market-row">
+    <div class="market-chart-col">
+        <div class="market-toolbar">
+            <span style="font-weight:bold;font-size:16px;margin-right:8px">股市 (Stock)</span>
+            <select id="stockRegionSel" style="font-size:12px;padding:2px;margin-right:4px"></select>
+            <select id="stockIndexSel" style="font-size:12px;padding:2px;margin-right:8px"></select>
+            <button class="btn-mode active" data-chart="stock" data-mode="long">长期</button>
+            <button class="btn-mode" data-chart="stock" data-mode="intraday">分时</button>
+            <button class="btn-mode" data-chart="stock" data-mode="5d">5日</button>
+            <button class="btn-mode" data-chart="stock" data-mode="day">日K</button>
+            <button class="btn-mode" data-chart="stock" data-mode="week">周K</button>
+            <button class="btn-mode" data-chart="stock" data-mode="month">月K</button>
+        </div>
+        <canvas id="chartStock" width="750" height="200" style="border:1px solid #e2e8f0;border-radius:4px;background:rgba(255,255,255,0.05)"></canvas>
+        <div id="tooltipStock" class="tooltip"></div>
     </div>
-    <canvas id="chartStock" width="900" height="150" style="border:1px solid #e2e8f0;border-radius:4px;background:rgba(255,255,255,0.5)"></canvas>
+    <div class="market-info-col" id="infoStock">
+        <div class="info-card">
+            <div class="info-item"><span class="info-label lbl-date">日期</span><span class="info-value" id="valStockDate">-</span></div>
+            <div class="info-item"><span class="info-label lbl-last">最新</span><span class="info-value" id="valStockLast">-</span></div>
+            <div class="info-item"><span class="info-label lbl-chg">涨跌</span><span class="info-value" id="valStockChg">-</span></div>
+            <div class="info-item"><span class="info-label lbl-pct">幅度</span><span class="info-value" id="valStockPct">-</span></div>
+        </div>
+        <div class="info-card">
+            <div class="info-item"><span class="info-label lbl-open">今开</span><span class="info-value" id="valStockOpen">-</span></div>
+            <div class="info-item"><span class="info-label lbl-prev">昨收</span><span class="info-value" id="valStockPrev">-</span></div>
+            <div class="info-item"><span class="info-label lbl-high">最高</span><span class="info-value" id="valStockHigh">-</span></div>
+            <div class="info-item"><span class="info-label lbl-low">最低</span><span class="info-value" id="valStockLow">-</span></div>
+            <div class="info-item"><span class="info-label lbl-vol">成交</span><span class="info-value" id="valStockVol">-</span></div>
+        </div>
+    </div>
   </div>
+
   <!-- Gold Chart -->
-  <div class="market-chart-container" style="position:relative;">
-    <div style="font-size:12px;font-weight:bold;margin-bottom:4px;color:#475569">黄金 (Gold) (USD/oz)</div>
-    <canvas id="chartGold" width="900" height="150" style="border:1px solid #e2e8f0;border-radius:4px;background:rgba(255,255,255,0.5)"></canvas>
+  <div class="market-row">
+    <div class="market-chart-col">
+        <div class="market-toolbar">
+            <span style="font-weight:bold;font-size:16px;margin-right:8px">黄金 (Gold)</span>
+            <button class="btn-mode active" data-chart="gold" data-mode="long">长期</button>
+            <button class="btn-mode" data-chart="gold" data-mode="intraday">分时</button>
+            <button class="btn-mode" data-chart="gold" data-mode="5d">5日</button>
+            <button class="btn-mode" data-chart="gold" data-mode="day">日K</button>
+            <button class="btn-mode" data-chart="gold" data-mode="week">周K</button>
+            <button class="btn-mode" data-chart="gold" data-mode="month">月K</button>
+        </div>
+        <canvas id="chartGold" width="750" height="200" style="border:1px solid #e2e8f0;border-radius:4px;background:rgba(255,255,255,0.05)"></canvas>
+        <div id="tooltipGold" class="tooltip"></div>
+    </div>
+    <div class="market-info-col" id="infoGold">
+        <div class="info-card">
+            <div class="info-item"><span class="info-label lbl-date">日期</span><span class="info-value" id="valGoldDate">-</span></div>
+            <div class="info-item"><span class="info-label lbl-last">最新</span><span class="info-value" id="valGoldLast">-</span></div>
+            <div class="info-item"><span class="info-label lbl-chg">涨跌</span><span class="info-value" id="valGoldChg">-</span></div>
+            <div class="info-item"><span class="info-label lbl-pct">幅度</span><span class="info-value" id="valGoldPct">-</span></div>
+        </div>
+        <div class="info-card">
+            <div class="info-item"><span class="info-label lbl-open">今开</span><span class="info-value" id="valGoldOpen">-</span></div>
+            <div class="info-item"><span class="info-label lbl-prev">昨收</span><span class="info-value" id="valGoldPrev">-</span></div>
+            <div class="info-item"><span class="info-label lbl-high">最高</span><span class="info-value" id="valGoldHigh">-</span></div>
+            <div class="info-item"><span class="info-label lbl-low">最低</span><span class="info-value" id="valGoldLow">-</span></div>
+        </div>
+    </div>
   </div>
+
   <!-- Oil Chart -->
-  <div class="market-chart-container" style="position:relative;">
-    <div style="font-size:12px;font-weight:bold;margin-bottom:4px;color:#475569">原油 (Crude Oil) (USD/bbl)</div>
-    <canvas id="chartOil" width="900" height="150" style="border:1px solid #e2e8f0;border-radius:4px;background:rgba(255,255,255,0.5)"></canvas>
+  <div class="market-row">
+    <div class="market-chart-col">
+        <div class="market-toolbar">
+            <span style="font-weight:bold;font-size:16px;margin-right:8px">原油 (Oil)</span>
+            <button class="btn-mode active" data-chart="oil" data-mode="long">长期</button>
+            <button class="btn-mode" data-chart="oil" data-mode="intraday">分时</button>
+            <button class="btn-mode" data-chart="oil" data-mode="5d">5日</button>
+            <button class="btn-mode" data-chart="oil" data-mode="day">日K</button>
+            <button class="btn-mode" data-chart="oil" data-mode="week">周K</button>
+            <button class="btn-mode" data-chart="oil" data-mode="month">月K</button>
+        </div>
+        <canvas id="chartOil" width="750" height="200" style="border:1px solid #e2e8f0;border-radius:4px;background:rgba(255,255,255,0.05)"></canvas>
+        <div id="tooltipOil" class="tooltip"></div>
+    </div>
+    <div class="market-info-col" id="infoOil">
+        <div class="info-card">
+            <div class="info-item"><span class="info-label lbl-date">日期</span><span class="info-value" id="valOilDate">-</span></div>
+            <div class="info-item"><span class="info-label lbl-last">最新</span><span class="info-value" id="valOilLast">-</span></div>
+            <div class="info-item"><span class="info-label lbl-chg">涨跌</span><span class="info-value" id="valOilChg">-</span></div>
+            <div class="info-item"><span class="info-label lbl-pct">幅度</span><span class="info-value" id="valOilPct">-</span></div>
+        </div>
+        <div class="info-card">
+            <div class="info-item"><span class="info-label lbl-open">今开</span><span class="info-value" id="valOilOpen">-</span></div>
+            <div class="info-item"><span class="info-label lbl-prev">昨收</span><span class="info-value" id="valOilPrev">-</span></div>
+            <div class="info-item"><span class="info-label lbl-high">最高</span><span class="info-value" id="valOilHigh">-</span></div>
+            <div class="info-item"><span class="info-label lbl-low">最低</span><span class="info-value" id="valOilLow">-</span></div>
+        </div>
+    </div>
   </div>
 </div>
 </div>
